@@ -351,12 +351,12 @@
       const sessionToken = tokenData.session_token || tokenData.data?.session_token;
       if (!sessionToken) throw new Error("No HeyGen session token.");
 
-      // 2. Start HeyGen LiveAvatar (session already started by Firebase)
-      avatarSession = new LiveAvatarSession(sessionToken, {
-      voiceChat: false,
-      liveKitUrl: tokenData.livekit_url,
-      liveKitToken: tokenData.livekit_client_token
-      });
+      // 2. Start HeyGen LiveAvatar (pass LiveKit creds so SDK skips /start call)
+         avatarSession = new LiveAvatarSession(tokenData.session_token, {
+         voiceChat: false,
+         liveKitUrl: tokenData.livekit_url,
+         liveKitToken: tokenData.livekit_client_token
+         });
       await avatarSession.start();
 
       // 3. Get HeyGen WebSocket for lip sync
