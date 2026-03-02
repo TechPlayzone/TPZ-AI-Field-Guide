@@ -87,7 +87,7 @@
   import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavatar-web-sdk/+esm";
 
   // ===== CONFIG =====
-  const EL_AGENT_ID = "agent_5801khhgn69gfg6b9zga764yhhv9";
+  const EL_AGENT_ID = "bb64ea6a259d4c00be451199037adf40";
   const FIREBASE_TOKEN_URL = "https://getsessiontoken-s727ay3xwq-uc.a.run.app";
 
   // ===== MAJOR CONTEXT =====
@@ -95,7 +95,7 @@
     general: {
       label: "General / Exploring",
       prompt: "The student is exploring AI generally across different fields. Help them discover how AI applies to various industries and careers.",
-      firstMessage: "Hi! I'm Elenora, your AI Field Guide at Hillsborough Community College. I'm here to help you explore how AI can impact your future career. What field are you most curious about?"
+      firstMessage: "Hi! I'm Elenora, your AI Field Guide at Hillsborough College. I'm here to help you explore how AI can impact your future career. What field are you most curious about?"
     },
     construction: {
       label: "Construction Management",
@@ -122,6 +122,11 @@
       prompt: "The student is in Business and Entrepreneurship. Focus on AI for market research, customer segmentation, business planning, competitive analysis, and AI-powered marketing.",
       firstMessage: "Hi! I'm Elenora, your AI Field Guide. Entrepreneurs who understand AI have a huge competitive edge right now. Let's explore how AI can power your business ideas. Where would you like to start?"
     },
+    cloud computing: {
+      label: "Cloud Computing",
+      prompt: "The student is in Cloud Computing. Focus on AI for understanding cloud computing tools.",
+      firstMessage: "Hi! I'm Elenora, your AI Field Guide. Those who understand AI have a huge competitive edge right now. Let's explore how AI can help you with your Cloud Computing Major. Where would you like to start?"
+    },
     cybersecurity: {
       label: "Cybersecurity",
       prompt: "The student is in Cybersecurity. Focus on AI for threat detection, log analysis, vulnerability assessment, incident response automation, and adversarial AI awareness.",
@@ -147,7 +152,7 @@
   let isSpeaking = false;
   let micMuted = false;
 
-  function log(msg) { console.log("[TPZ]", msg); }
+  function log(msg) { console.log("[Mrs. Desh]", msg); }
 
   function addTranscript(role, text) {
     transcriptEl.style.display = "block";
