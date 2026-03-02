@@ -214,12 +214,12 @@
 
   <div id="transcript"></div>
 
-  <p style="color:#222e3a; font-size:11px; margin-top:18px; letter-spacing:1px;">TPZ AI Field Guide &bull; v1.6 &bull; March 2026</p>
+  <p style="color:#222e3a; font-size:11px; margin-top:18px; letter-spacing:1px;">TPZ AI Field Guide &bull; v1.7 &bull; March 2026</p>
 
   <!-- LiveKit CDN client -->
   <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
   <!-- ElevenLabs Conversational AI -->
-  <script src="https://cdn.jsdelivr.net/npm/@elevenlabs/client@latest/dist/index.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@11labs/client@latest/dist/index.umd.js"></script>
 
   <script>
   (function () {
@@ -413,7 +413,7 @@
       micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       log("Mic access granted ✓");
 
-      const ElevenLabsClient = window.ElevenLabs || window.ElevenLabsClient || window.ElevenLabsConversational || window.Conversation;
+      const ElevenLabsClient = window.Conversation || window.ElevenLabs || window.ElevenLabsClient;
 
       log("ElevenLabs window keys: " + Object.keys(window).filter(k => k.toLowerCase().includes("eleven")).join(", "));
       if (!ElevenLabsClient) throw new Error("ElevenLabs SDK not loaded. Available: " + Object.keys(window).filter(k => k.toLowerCase().includes("eleven")).join(", "));
