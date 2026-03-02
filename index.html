@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>TPZ AI Field Guide</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #1a1a2e;
+      color: white;
+      min-height: 100vh;
+    }
+    h1 { color: #0097A7; font-size: 24px; margin-bottom: 4px; }
+    .subtitle { color: #777; font-size: 13px; margin-bottom: 16px; }
+    #avatar-container {
+      width: 720px; height: 480px; margin: 0 auto 12px;
+      background: #000; border-radius: 12px; overflow: hidden;
+    }
+    #avatar-container video {
+      width: 100% !important; height: 100% !important; object-fit: cover !important;
+    }
+    #status { color: #aaa; margin: 8px 0 16px; font-size: 14px; min-height: 20px; }
+    .controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 12px; }
+    button {
+      padding: 12px 28px; font-size: 15px; border: none;
+      border-radius: 8px; cursor: pointer; font-weight: bold;
+    }
+    #startBtn { background: #0097A7; color: white; }
+    #startBtn:hover { background: #00838F; }
+    #startBtn:disabled { background: #444; cursor: not-allowed; }
+    #stopBtn { background: #c62828; color: white; display: none; }
+    #transcript {
+      max-width: 720px; margin: 0 auto; text-align: left;
+      background: #111; border-radius: 8px; padding: 12px;
+      max-height: 200px; overflow-y: auto; font-size: 13px;
+      display: none; line-height: 1.5;
+    }
+    .msg-user { color: #4FC3F7; margin-bottom: 4px; }
+    .msg-agent { color: #81C784; margin-bottom: 4px; }
+    .msg-system { color: #666; font-style: italic; margin-bottom: 4px; }
+    @media (max-width: 760px) {
+      #avatar-container { width: 100%; height: 56vw; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>TPZ AI Field Guide</h1>
+  <p class="subtitle">Powered by TechPlayzone &bull; Ask Elenora anything about AI</p>
+  <div id="avatar-container"></div>
+  <p id="status">Click Start to connect with Elenora.</p>
+  <div class="controls">
+    <button id="startBtn">Start Session</button>
+    <button id="stopBtn">End Session</button>
+  </div>
+  <div id="transcript"></div>
+  <p style="color:#222e3a; font-size:11px; margin-top:18px; letter-spacing:1px;">TPZ AI Field Guide &bull; v1.8 &bull; March 2026</p>
+
+<script type="module">
+  import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavatar-web-sdk/+esm";
+
+  // ===== CONFIG =====
+  const EL_AGENT_ID = "agent_5801khhgn69gfg6b9zga764yhhv9";
+  const FIREBASE_TOKEN_URL = "https://getsessiontoken-s727ay3xwq-uc.a.run.app";
+
+  const startBtn = document.getElementById("startBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  const statusEl = document.getElementById("status");
+  const container = document.getElementById("avatar-container");
+  const transcriptEl = document.getElementById("transcript");
+
+  let avatarSession = null;
+  let heygenWs = null;
+  let elWs = null;
+  let micStream = null;
+  let micProcessor = null;
+  let micContext = null;
+  let keepAliveInterval = null;
+  let playbackCtx = null;
+  let isSpeaking = false;
+  let micMuted = false;
+
+  function log(msg) { console.log("[TPZ]", msg); }
+
+  // ===== TRANSCRIPT =====
+  function addTranscript(role, text) {
+    transcriptEl.style.display = "block";
+    const div = document.createElement("div");
+    div.className = role === "user" ? "msg-user" : role === "agent" ? "msg-agent" : "msg-system";
+    div.textContent = (role === "user" ? "You: " : role === "agent" ? "Elenora: " : "") + text;
+    transcriptEl.appendChild(div);
+    transcriptEl.scrollTop = transcriptEl.scrollHeight;
+  }
+
+  // ===== HEYGEN WEBSOCKET COMMANDS =====
+  function hgSend(data) {
+    if (heygenWs && heygenWs.readyState === WebSocket.OPEN) {
+      heygenWs.send(JSON.stringify(data));
+    }
+  }
+
+  // ===== PCM CONVERSION UTILITIES =====
+  function resamplePCM(int16Array, srcRate, dstRate) {
+    if (srcRate === dstRate) return int16Array;
+    const ratio = srcRate / dstRate;
+    const newLen = Math.round(int16Array.length / ratio);
+    const output = new Int16Array(newLen);
+    for (let i = 0; i < newLen; i++) {
+      const srcIdx = i * ratio;
+      const idx = Math.floor(srcIdx);
+      const frac = srcIdx - idx;
+      const s0 = int16Array[idx] || 0;
+      const s1 = int16Array[Math.min(idx + 1, int16Array.length - 1)] || 0;
+      output[i] = Math.round(s0 + (s1 - s0) * frac);
+    }
+    return output;
+  }
+
+  function base64ToBytes(b64) {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+
+  function bytesToBase64(uint8) {
+    let binary = "";
+    for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
+    return btoa(binary);
+  }
+
+  function base64ToInt16(b64) {
+    const bytes = base64ToBytes(b64);
+    return new Int16Array(bytes.buffer);
+  }
+
+  function int16ToBase64(int16) {
+    return bytesToBase64(new Uint8Array(int16.buffer));
+  }
+
+  // ===== BRIDGE: ElevenLabs audio -> HeyGen lip sync =====
+  let elOutputRate = 16000;
+
+  function bridgeAudio(audioBase64) {
+    const pcmOriginal = base64ToInt16(audioBase64);
+    const pcm24k = resamplePCM(pcmOriginal, elOutputRate, 24000);
+    const b64_24k = int16ToBase64(pcm24k);
+    hgSend({ type: "agent.speak", audio: b64_24k });
+  }
+
+  // ===== MICROPHONE =====
+  async function startMicrophone() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const legacyGetUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+      if (!legacyGetUserMedia) {
+        throw new Error("Microphone access requires HTTPS. Open: https://techplayzone.github.io/TPZ-AI-Field-Guide/");
+      }
+      micStream = await new Promise((resolve, reject) => {
+        legacyGetUserMedia.call(navigator, { audio: true }, resolve, reject);
+      });
+    } else {
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
+      });
+    }
+    micContext = new AudioContext({ sampleRate: 16000 });
+    const source = micContext.createMediaStreamSource(micStream);
+    micProcessor = micContext.createScriptProcessor(4096, 1, 1);
+    micProcessor.onaudioprocess = (e) => {
+      if (!elWs || elWs.readyState !== WebSocket.OPEN) return;
+      const float32 = e.inputBuffer.getChannelData(0);
+      const int16 = new Int16Array(float32.length);
+      for (let i = 0; i < float32.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32[i]));
+        int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      elWs.send(JSON.stringify({ user_audio_chunk: int16ToBase64(int16) }));
+    };
+    source.connect(micProcessor);
+    micProcessor.connect(micContext.destination);
+    log("Microphone started");
+  }
+
+  function stopMicrophone() {
+    if (micProcessor) { micProcessor.disconnect(); micProcessor = null; }
+    if (micContext) { micContext.close(); micContext = null; }
+    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  }
+
+  // ===== ATTACH AVATAR VIDEO + AUDIO =====
+  function attachAvatarMedia(room) {
+    function attachTrack(track) {
+      if (track.kind === "video") {
+        const el = track.attach();
+        container.innerHTML = "";
+        container.appendChild(el);
+        log("Video attached");
+      }
+      if (track.kind === "audio") {
+        const audioEl = track.attach();
+        audioEl.style.display = "none";
+        document.body.appendChild(audioEl);
+        log("Audio attached");
+      }
+    }
+    room.remoteParticipants.forEach((p) => {
+      p.trackPublications.forEach((pub) => {
+        if (pub.track) attachTrack(pub.track);
+      });
+    });
+    room.on("trackSubscribed", (track) => attachTrack(track));
+  }
+
+  // ===== MIC MUTING =====
+  function muteMic() {
+    if (micStream && !micMuted) {
+      micStream.getAudioTracks().forEach(t => t.enabled = false);
+      micMuted = true;
+      log("Mic muted");
+    }
+  }
+  function unmuteMic() {
+    if (micStream && micMuted) {
+      micStream.getAudioTracks().forEach(t => t.enabled = true);
+      micMuted = false;
+      log("Mic unmuted");
+    }
+  }
+
+  // ===== FIND HEYGEN WEBSOCKET =====
+  function findHeyGenWs(session) {
+    if (session._sessionEventSocket instanceof WebSocket) return session._sessionEventSocket;
+    for (const key of Object.keys(session)) {
+      if (session[key] instanceof WebSocket) {
+        log("WS found at session." + key);
+        return session[key];
+      }
+    }
+    return null;
+  }
+
+  // ===== CONNECT ELEVENLABS =====
+  function connectElevenLabs() {
+    return new Promise((resolve, reject) => {
+      const url = `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=${EL_AGENT_ID}`;
+      elWs = new WebSocket(url);
+
+      elWs.onopen = () => { log("ElevenLabs WS connected"); resolve(); };
+      elWs.onerror = (err) => { log("ElevenLabs WS error: " + err); reject(err); };
+      elWs.onclose = (e) => {
+        log("ElevenLabs WS closed: " + e.code + " " + e.reason);
+        if (isSpeaking) { hgSend({ type: "agent.speak_end" }); isSpeaking = false; }
+        statusEl.textContent = "Voice disconnected.";
+      };
+
+      elWs.onmessage = (evt) => {
+        let msg;
+        try { msg = JSON.parse(evt.data); } catch { return; }
+
+        switch (msg.type) {
+          case "conversation_initiation_metadata": {
+            const meta = msg.conversation_initiation_metadata_event;
+            log("EL conversation started: " + meta.conversation_id);
+            const fmt = meta.agent_output_audio_format || "pcm_16000";
+            const rate = parseInt(fmt.replace("pcm_", ""));
+            if (!isNaN(rate)) elOutputRate = rate;
+            log("EL output audio: " + fmt + " (rate: " + elOutputRate + ")");
+            statusEl.textContent = "Connected! Speak to Elenora.";
+            addTranscript("system", "Session started. You can speak now.");
+            hgSend({ type: "agent.start_listening" });
+            break;
+          }
+          case "ping": {
+            const eventId = msg.ping_event?.event_id;
+            if (eventId !== undefined) elWs.send(JSON.stringify({ type: "pong", event_id: eventId }));
+            break;
+          }
+          case "audio": {
+            const audioB64 = msg.audio_event?.audio_base_64;
+            if (audioB64) {
+              if (!isSpeaking) {
+                isSpeaking = true;
+                muteMic();
+                hgSend({ type: "agent.stop_listening" });
+                statusEl.textContent = "Elenora is speaking...";
+              }
+              bridgeAudio(audioB64);
+            }
+            break;
+          }
+          case "user_transcript": {
+            const text = msg.user_transcription_event?.user_transcript;
+            if (text) addTranscript("user", text);
+            break;
+          }
+          case "agent_response": {
+            const text = msg.agent_response_event?.agent_response;
+            if (text) addTranscript("agent", text);
+            break;
+          }
+          case "agent_response_correction": {
+            const text = msg.agent_response_correction_event?.corrected_agent_response;
+            if (text) {
+              const msgs = transcriptEl.querySelectorAll(".msg-agent");
+              if (msgs.length > 0) msgs[msgs.length - 1].textContent = "Elenora: " + text;
+            }
+            break;
+          }
+          case "interruption": {
+            log("User interrupted");
+            hgSend({ type: "agent.interrupt" });
+            hgSend({ type: "agent.start_listening" });
+            isSpeaking = false;
+            unmuteMic();
+            statusEl.textContent = "Listening...";
+            break;
+          }
+          case "agent_response_end":
+          case "turn_end": {
+            if (isSpeaking) {
+              hgSend({ type: "agent.speak_end" });
+              hgSend({ type: "agent.start_listening" });
+              isSpeaking = false;
+              unmuteMic();
+              statusEl.textContent = "Listening...";
+            }
+            break;
+          }
+          default:
+            log("EL event: " + msg.type);
+        }
+      };
+    });
+  }
+
+  // ===== START SESSION =====
+  startBtn.addEventListener("click", async () => {
+    startBtn.disabled = true;
+    statusEl.textContent = "Starting avatar...";
+
+    try {
+      // 1. Get session token from Firebase
+      const tokenRes = await fetch(FIREBASE_TOKEN_URL);
+      const tokenData = await tokenRes.json();
+      log("Firebase response: " + JSON.stringify(tokenData));
+
+      // Firebase now returns session_token at top level after Step 1+2
+      const sessionToken = tokenData.session_token || tokenData.data?.session_token;
+      if (!sessionToken) throw new Error("No HeyGen session token.");
+
+      // 2. Start HeyGen LiveAvatar
+      avatarSession = new LiveAvatarSession(sessionToken, { voiceChat: false });
+      await avatarSession.start();
+      if (avatarSession.room) attachAvatarMedia(avatarSession.room);
+
+      // 3. Get HeyGen WebSocket for lip sync
+      heygenWs = findHeyGenWs(avatarSession);
+      if (heygenWs) {
+        log("HeyGen WS found (state: " + heygenWs.readyState + ")");
+        heygenWs.addEventListener("message", (evt) => {
+          try {
+            const m = JSON.parse(evt.data);
+            log("HG event: " + m.type);
+            if (m.type === "agent.speak_ended") {
+              isSpeaking = false;
+              unmuteMic();
+              hgSend({ type: "agent.start_listening" });
+              statusEl.textContent = "Listening...";
+              log("Avatar done speaking - mic unmuted");
+            }
+          } catch(e) {}
+        });
+      } else {
+        log("WARNING: No HeyGen WS found - lip sync won't work");
+      }
+
+      keepAliveInterval = setInterval(() => hgSend({ type: "session.keep_alive" }), 120000);
+      statusEl.textContent = "Avatar ready. Connecting voice...";
+
+      // 4. Start microphone
+      await startMicrophone();
+
+      // 5. Connect ElevenLabs
+      await connectElevenLabs();
+
+      stopBtn.style.display = "inline-block";
+
+    } catch (error) {
+      console.error("Startup error:", error);
+      statusEl.textContent = "Error: " + error.message;
+      startBtn.disabled = false;
+      stopMicrophone();
+    }
+  });
+
+  // ===== STOP SESSION =====
+  stopBtn.addEventListener("click", async () => {
+    if (keepAliveInterval) { clearInterval(keepAliveInterval); keepAliveInterval = null; }
+    if (elWs) { elWs.close(); elWs = null; }
+    stopMicrophone();
+    if (avatarSession) { try { await avatarSession.stop(); } catch(e) {} avatarSession = null; }
+    heygenWs = null;
+    if (playbackCtx) { playbackCtx.close(); playbackCtx = null; }
+    container.innerHTML = "";
+    isSpeaking = false;
+    statusEl.textContent = "Session ended.";
+    startBtn.disabled = false;
+    stopBtn.style.display = "none";
+    document.querySelectorAll("audio").forEach(a => a.remove());
+  });
+</script>
+
+</body>
+</html>
