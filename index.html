@@ -2,514 +2,404 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TPZ AI Field Guide</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Inter:wght@400;500&display=swap');
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: Arial, sans-serif;
       text-align: center;
       padding: 20px;
-      background: #0d0d1a;
+      background: #1a1a2e;
       color: white;
       min-height: 100vh;
     }
-
-    h1 {
-      font-family: 'Orbitron', sans-serif;
-      color: #0097A7;
-      font-size: 22px;
-      letter-spacing: 2px;
-      margin-bottom: 4px;
-    }
-
-    .subtitle {
-      color: #555;
-      font-size: 12px;
-      margin-bottom: 16px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-
+    h1 { color: #0097A7; font-size: 24px; margin-bottom: 4px; }
+    .subtitle { color: #777; font-size: 13px; margin-bottom: 16px; }
     #avatar-container {
-      width: 720px;
-      height: 480px;
-      margin: 0 auto 12px;
-      background: #000;
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid #1a2a3a;
-      position: relative;
+      width: 720px; height: 480px; margin: 0 auto 12px;
+      background: #000; border-radius: 12px; overflow: hidden;
     }
-
     #avatar-container video {
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: cover !important;
-      display: block;
+      width: 100% !important; height: 100% !important; object-fit: cover !important;
     }
-
-    /* Mic indicator overlay */
-    #mic-indicator {
-      position: absolute;
-      bottom: 14px;
-      right: 14px;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: rgba(0,0,0,0.6);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      display: none;
-    }
-
-    #mic-indicator.active { display: flex; }
-    #mic-indicator.muted { background: rgba(180,0,0,0.7); }
-    #mic-indicator.live  { background: rgba(0,150,100,0.7); }
-
-    #status {
-      color: #7a9aaa;
-      margin: 8px 0 14px;
-      font-size: 13px;
-      min-height: 18px;
-      letter-spacing: 0.5px;
-    }
-
-    .controls {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-
+    #status { color: #aaa; margin: 8px 0 16px; font-size: 14px; min-height: 20px; }
+    .controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 12px; }
     button {
-      padding: 11px 28px;
-      font-size: 14px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-      font-family: 'Inter', sans-serif;
-      transition: background 0.2s, transform 0.1s;
+      padding: 12px 28px; font-size: 15px; border: none;
+      border-radius: 8px; cursor: pointer; font-weight: bold;
     }
-
-    button:active { transform: scale(0.97); }
-
-    #startBtn {
-      background: #0097A7;
-      color: white;
-    }
-    #startBtn:hover:not(:disabled) { background: #00838F; }
-    #startBtn:disabled { background: #2a3a44; color: #556; cursor: not-allowed; }
-
-    #stopBtn {
-      background: #c62828;
-      color: white;
-      display: none;
-    }
-    #stopBtn:hover { background: #b71c1c; }
-
-    /* Major selector */
-    #major-select-wrap {
-      margin-bottom: 14px;
-    }
-
-    #major-select-wrap label {
-      font-size: 12px;
-      color: #667;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-right: 8px;
-    }
-
-    #majorSelect {
-      background: #111827;
-      color: #cdd;
-      border: 1px solid #1a3444;
-      border-radius: 6px;
-      padding: 7px 12px;
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    #headphone-wrap {
-      margin-bottom: 14px;
-      font-size: 13px;
-      color: #7a9aaa;
-    }
-    #headphone-wrap input { cursor: pointer; margin-right: 6px; }
-    #headphone-wrap label { cursor: pointer; }
-
-    /* Transcript */
+    #startBtn { background: #0097A7; color: white; }
+    #startBtn:hover { background: #00838F; }
+    #startBtn:disabled { background: #444; cursor: not-allowed; }
+    #stopBtn { background: #c62828; color: white; display: none; }
     #transcript {
-      max-width: 720px;
-      margin: 0 auto;
-      text-align: left;
-      background: #080d14;
-      border: 1px solid #1a2a3a;
-      border-radius: 8px;
-      padding: 12px 14px;
-      max-height: 180px;
-      overflow-y: auto;
-      font-size: 12.5px;
-      display: none;
-      line-height: 1.6;
+      max-width: 720px; margin: 0 auto; text-align: left;
+      background: #111; border-radius: 8px; padding: 12px;
+      max-height: 200px; overflow-y: auto; font-size: 13px;
+      display: none; line-height: 1.5;
     }
-
-    .msg-user   { color: #4FC3F7; margin-bottom: 5px; }
-    .msg-agent  { color: #81C784; margin-bottom: 5px; }
-    .msg-system { color: #445; font-style: italic; margin-bottom: 3px; }
-
-    #transcript::-webkit-scrollbar { width: 4px; }
-    #transcript::-webkit-scrollbar-track { background: #080d14; }
-    #transcript::-webkit-scrollbar-thumb { background: #1a3444; border-radius: 2px; }
-
+    .msg-user { color: #4FC3F7; margin-bottom: 4px; }
+    .msg-agent { color: #81C784; margin-bottom: 4px; }
+    .msg-system { color: #666; font-style: italic; margin-bottom: 4px; }
     @media (max-width: 760px) {
       #avatar-container { width: 100%; height: 56vw; }
-      #transcript { margin: 0; }
     }
   </style>
 </head>
-
 <body>
+
   <h1>TPZ AI Field Guide</h1>
-  <p class="subtitle">Powered by TechPlayzone &bull; HCC AI Innovation Center</p>
-
-  <div id="major-select-wrap">
-    <label for="majorSelect">Your Major:</label>
-    <select id="majorSelect">
-      <option value="general">General / Exploring</option>
-      <option value="construction">Construction Management</option>
-      <option value="architecture">Architecture</option>
-      <option value="electronics">Electronics Engineering Technology</option>
-      <option value="accounting">Accounting</option>
-      <option value="business">Business &amp; Entrepreneurship</option>
-      <option value="cybersecurity">Cybersecurity</option>
-    </select>
-  </div>
-
-  <div id="avatar-container">
-    <div id="mic-indicator" title="Microphone status">🎙️</div>
-  </div>
-
-  <p id="status">Select your major, then click Start Session.</p>
-
+  <p class="subtitle">Powered by TechPlayzone &bull; Ask Elenora anything about AI</p>
+  <div id="avatar-container"></div>
+  <p id="status">Click Start to connect with Elenora.</p>
   <div class="controls">
-    <button id="startBtn">▶ Start Session</button>
-    <button id="stopBtn">■ End Session</button>
+    <button id="startBtn">Start Session</button>
+    <button id="stopBtn">End Session</button>
   </div>
-
-  <div id="headphone-wrap">
-    <label>
-      <input type="checkbox" id="headphoneToggle" />
-      🎧 I'm using headphones (disables mic mute)
-    </label>
-  </div>
-
   <div id="transcript"></div>
+  <p style="color:#222e3a; font-size:11px; margin-top:18px; letter-spacing:1px;">TPZ AI Field Guide &bull; v1.9 &bull; March 2026</p>
 
-  <p style="color:#222e3a; font-size:11px; margin-top:18px; letter-spacing:1px;">TPZ AI Field Guide &bull; v1.5 &bull; March 2026</p>
+<script type="module">
+  import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavatar-web-sdk/+esm";
 
-  <!-- LiveKit CDN client -->
-  <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
-  <!-- ElevenLabs Conversational AI -->
-  <script src="https://cdn.jsdelivr.net/npm/@elevenlabs/client@latest/dist/index.umd.js"></script>
+  // ===== CONFIG =====
+  const EL_AGENT_ID = "agent_5801khhgn69gfg6b9zga764yhhv9";
+  const FIREBASE_TOKEN_URL = "https://getsessiontoken-s727ay3xwq-uc.a.run.app";
 
-  <script>
-  (function () {
+  const startBtn = document.getElementById("startBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  const statusEl = document.getElementById("status");
+  const container = document.getElementById("avatar-container");
+  const transcriptEl = document.getElementById("transcript");
 
-    // =============================================
-    // CONFIG — update these to match your settings
-    // =============================================
-    const FIREBASE_TOKEN_URL = "https://getsessiontoken-s727ay3xwq-uc.a.run.app";
-    const HEYGEN_AVATAR_ID   = "Elenora_public_3_20250101"; // your avatar ID
-    const HEYGEN_VOICE_ID    = "";  // leave blank to use avatar default
-    const EL_AGENT_ID        = "YOUR_ELEVENLABS_AGENT_ID"; // replace with your agent ID
+  let avatarSession = null;
+  let heygenWs = null;
+  let elWs = null;
+  let micStream = null;
+  let micProcessor = null;
+  let micContext = null;
+  let keepAliveInterval = null;
+  let playbackCtx = null;
+  let isSpeaking = false;
+  let micMuted = false;
 
-    // Major → custom greeting context sent to ElevenLabs
-    const MAJOR_CONTEXT = {
-      general:      "The student is exploring AI generally.",
-      construction: "The student is in Construction Management. Focus on AI tools for project estimation, scheduling, site safety, and BIM.",
-      architecture: "The student is in Architecture. Focus on AI for design generation, energy modeling, code compliance, and rendering.",
-      electronics:  "The student is in Electronics Engineering Technology. Focus on AI for circuit design, troubleshooting, component selection, and embedded systems.",
-      accounting:   "The student is in Accounting. Focus on AI for anomaly detection, audit automation, tax analysis, and financial forecasting.",
-      business:     "The student is in Business & Entrepreneurship. Focus on AI for market research, customer segmentation, business planning, and competitive analysis.",
-      cybersecurity:"The student is in Cybersecurity. Focus on AI for threat detection, log analysis, vulnerability assessment, and incident response.",
+  function log(msg) { console.log("[TPZ]", msg); }
+
+  function addTranscript(role, text) {
+    transcriptEl.style.display = "block";
+    const div = document.createElement("div");
+    div.className = role === "user" ? "msg-user" : role === "agent" ? "msg-agent" : "msg-system";
+    div.textContent = (role === "user" ? "You: " : role === "agent" ? "Elenora: " : "") + text;
+    transcriptEl.appendChild(div);
+    transcriptEl.scrollTop = transcriptEl.scrollHeight;
+  }
+
+  function hgSend(data) {
+    if (heygenWs && heygenWs.readyState === WebSocket.OPEN) {
+      heygenWs.send(JSON.stringify(data));
+    }
+  }
+
+  function resamplePCM(int16Array, srcRate, dstRate) {
+    if (srcRate === dstRate) return int16Array;
+    const ratio = srcRate / dstRate;
+    const newLen = Math.round(int16Array.length / ratio);
+    const output = new Int16Array(newLen);
+    for (let i = 0; i < newLen; i++) {
+      const srcIdx = i * ratio;
+      const idx = Math.floor(srcIdx);
+      const frac = srcIdx - idx;
+      const s0 = int16Array[idx] || 0;
+      const s1 = int16Array[Math.min(idx + 1, int16Array.length - 1)] || 0;
+      output[i] = Math.round(s0 + (s1 - s0) * frac);
+    }
+    return output;
+  }
+
+  function base64ToBytes(b64) {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+
+  function bytesToBase64(uint8) {
+    let binary = "";
+    for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
+    return btoa(binary);
+  }
+
+  function base64ToInt16(b64) {
+    const bytes = base64ToBytes(b64);
+    return new Int16Array(bytes.buffer);
+  }
+
+  function int16ToBase64(int16) {
+    return bytesToBase64(new Uint8Array(int16.buffer));
+  }
+
+  let elOutputRate = 16000;
+
+  function bridgeAudio(audioBase64) {
+    const pcmOriginal = base64ToInt16(audioBase64);
+    const pcm24k = resamplePCM(pcmOriginal, elOutputRate, 24000);
+    const b64_24k = int16ToBase64(pcm24k);
+    hgSend({ type: "agent.speak", audio: b64_24k });
+  }
+
+  async function startMicrophone() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const legacyGetUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+      if (!legacyGetUserMedia) {
+        throw new Error("Microphone access requires HTTPS. Open: https://techplayzone.github.io/TPZ-AI-Field-Guide/");
+      }
+      micStream = await new Promise((resolve, reject) => {
+        legacyGetUserMedia.call(navigator, { audio: true }, resolve, reject);
+      });
+    } else {
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
+      });
+    }
+    micContext = new AudioContext({ sampleRate: 16000 });
+    const source = micContext.createMediaStreamSource(micStream);
+    micProcessor = micContext.createScriptProcessor(4096, 1, 1);
+    micProcessor.onaudioprocess = (e) => {
+      if (!elWs || elWs.readyState !== WebSocket.OPEN) return;
+      const float32 = e.inputBuffer.getChannelData(0);
+      const int16 = new Int16Array(float32.length);
+      for (let i = 0; i < float32.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32[i]));
+        int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      elWs.send(JSON.stringify({ user_audio_chunk: int16ToBase64(int16) }));
     };
+    source.connect(micProcessor);
+    micProcessor.connect(micContext.destination);
+    log("Microphone started");
+  }
 
-    // =============================================
-    // STATE
-    // =============================================
-    let heygenSession  = null;
-    let elConversation = null;
-    let micStream      = null;
-    let micMuted       = false;
-    let micMuteTimer   = null;
-    let sessionActive  = false;
+  function stopMicrophone() {
+    if (micProcessor) { micProcessor.disconnect(); micProcessor = null; }
+    if (micContext) { micContext.close(); micContext = null; }
+    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  }
 
-    // =============================================
-    // UI HELPERS
-    // =============================================
-    const startBtn     = document.getElementById("startBtn");
-    const stopBtn      = document.getElementById("stopBtn");
-    const statusEl     = document.getElementById("status");
-    const transcript   = document.getElementById("transcript");
-    const avatarContainer = document.getElementById("avatar-container");
-    const micIndicator = document.getElementById("mic-indicator");
-    const majorSelect       = document.getElementById("majorSelect");
-    const headphoneToggle   = document.getElementById("headphoneToggle");
-
-    function setStatus(msg)   { statusEl.textContent = msg; }
-    function log(msg)         { console.log("[TPZ]", msg); }
-
-    function addMsg(role, text) {
-      transcript.style.display = "block";
-      const div = document.createElement("div");
-      div.className = role === "user" ? "msg-user" : role === "agent" ? "msg-agent" : "msg-system";
-      const prefix = role === "user" ? "You: " : role === "agent" ? "Elenora: " : "";
-      div.textContent = prefix + text;
-      transcript.appendChild(div);
-      transcript.scrollTop = transcript.scrollHeight;
-    }
-
-    function setMicIndicator(state) {
-      // state: 'hidden' | 'muted' | 'live'
-      micIndicator.className = "";
-      if (state === "muted") {
-        micIndicator.classList.add("active", "muted");
-        micIndicator.textContent = "🔇";
-      } else if (state === "live") {
-        micIndicator.classList.add("active", "live");
-        micIndicator.textContent = "🎙️";
+  function attachAvatarMedia(room) {
+    function attachTrack(track) {
+      if (track.kind === "video") {
+        const el = track.attach();
+        container.innerHTML = "";
+        container.appendChild(el);
+        log("Video attached");
       }
-      // else hidden
-    }
-
-    // =============================================
-    // MIC MUTE / UNMUTE
-    // =============================================
-    function muteMic() {
-      if (headphoneToggle.checked) {
-        log("🎧 Headphone mode — skipping mic mute");
-        return;
+      if (track.kind === "audio") {
+        const audioEl = track.attach();
+        audioEl.style.display = "none";
+        document.body.appendChild(audioEl);
+        log("Audio attached");
       }
-      if (!micStream || micMuted) return;
+    }
+    room.remoteParticipants.forEach((p) => {
+      p.trackPublications.forEach((pub) => {
+        if (pub.track) attachTrack(pub.track);
+      });
+    });
+    room.on("trackSubscribed", (track) => attachTrack(track));
+  }
+
+  function muteMic() {
+    if (micStream && !micMuted) {
       micStream.getAudioTracks().forEach(t => t.enabled = false);
       micMuted = true;
-      setMicIndicator("muted");
-      log("🔇 Mic MUTED");
-
-      // Safety: force-unmute after 30 seconds no matter what
-      if (micMuteTimer) clearTimeout(micMuteTimer);
-      micMuteTimer = setTimeout(() => {
-        if (micMuted) {
-          log("⚠️ SAFETY: Force unmuting after 30s timeout");
-          unmuteMic();
-        }
-      }, 30000);
     }
-
-    function unmuteMic() {
-      if (micMuteTimer) { clearTimeout(micMuteTimer); micMuteTimer = null; }
-      if (!micStream) return;
+  }
+  function unmuteMic() {
+    if (micStream && micMuted) {
       micStream.getAudioTracks().forEach(t => t.enabled = true);
       micMuted = false;
-      setMicIndicator("live");
-      log("🎙️ Mic UNMUTED");
     }
+  }
 
-    // =============================================
-    // HEYGEN SESSION (LiveKit direct)
-    // =============================================
-    async function startHeyGen() {
-      setStatus("Connecting to Elenora...");
-      log("Calling Firebase for session credentials...");
+  function findHeyGenWs(session) {
+    if (session._sessionEventSocket instanceof WebSocket) return session._sessionEventSocket;
+    for (const key of Object.keys(session)) {
+      if (session[key] instanceof WebSocket) {
+        log("WS found at session." + key);
+        return session[key];
+      }
+    }
+    return null;
+  }
 
+  function connectElevenLabs() {
+    return new Promise((resolve, reject) => {
+      const url = `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=${EL_AGENT_ID}`;
+      elWs = new WebSocket(url);
+
+      elWs.onopen = () => { log("ElevenLabs WebSocket connected"); resolve(); };
+      elWs.onerror = (err) => { log("ElevenLabs WS error: " + err); reject(err); };
+      elWs.onclose = (e) => {
+        log("ElevenLabs WS closed: " + e.code + " " + e.reason);
+        if (isSpeaking) { hgSend({ type: "agent.speak_end" }); isSpeaking = false; }
+        statusEl.textContent = "Voice disconnected.";
+      };
+
+      elWs.onmessage = (evt) => {
+        let msg;
+        try { msg = JSON.parse(evt.data); } catch { return; }
+
+        switch (msg.type) {
+          case "conversation_initiation_metadata": {
+            const meta = msg.conversation_initiation_metadata_event;
+            log("EL conversation started: " + meta.conversation_id);
+            const fmt = meta.agent_output_audio_format || "pcm_16000";
+            const rate = parseInt(fmt.replace("pcm_", ""));
+            if (!isNaN(rate)) elOutputRate = rate;
+            log("EL output audio: " + fmt + " (rate: " + elOutputRate + ")");
+            statusEl.textContent = "Connected! Speak to Elenora.";
+            addTranscript("system", "Session started. You can speak now.");
+            hgSend({ type: "agent.start_listening" });
+            break;
+          }
+          case "ping": {
+            const eventId = msg.ping_event?.event_id;
+            if (eventId !== undefined) elWs.send(JSON.stringify({ type: "pong", event_id: eventId }));
+            break;
+          }
+          case "audio": {
+            const audioB64 = msg.audio_event?.audio_base_64;
+            if (audioB64) {
+              if (!isSpeaking) {
+                isSpeaking = true;
+                muteMic();
+                hgSend({ type: "agent.stop_listening" });
+                statusEl.textContent = "Elenora is speaking...";
+              }
+              bridgeAudio(audioB64);
+            }
+            break;
+          }
+          case "user_transcript": {
+            const text = msg.user_transcription_event?.user_transcript;
+            if (text) addTranscript("user", text);
+            break;
+          }
+          case "agent_response": {
+            const text = msg.agent_response_event?.agent_response;
+            if (text) addTranscript("agent", text);
+            break;
+          }
+          case "agent_response_correction": {
+            const text = msg.agent_response_correction_event?.corrected_agent_response;
+            if (text) {
+              const msgs = transcriptEl.querySelectorAll(".msg-agent");
+              if (msgs.length > 0) msgs[msgs.length - 1].textContent = "Elenora: " + text;
+            }
+            break;
+          }
+          case "interruption": {
+            log("User interrupted agent");
+            hgSend({ type: "agent.interrupt" });
+            hgSend({ type: "agent.start_listening" });
+            isSpeaking = false;
+            unmuteMic();
+            statusEl.textContent = "Listening...";
+            break;
+          }
+          case "agent_response_end":
+          case "turn_end": {
+            if (isSpeaking) {
+              hgSend({ type: "agent.speak_end" });
+              hgSend({ type: "agent.start_listening" });
+              isSpeaking = false;
+              unmuteMic();
+              statusEl.textContent = "Listening...";
+            }
+            break;
+          }
+          default:
+            log("EL event: " + msg.type);
+        }
+      };
+    });
+  }
+
+  startBtn.addEventListener("click", async () => {
+    startBtn.disabled = true;
+    statusEl.textContent = "Starting avatar...";
+
+    try {
+      // 1. Get session token from Firebase (Step 1 only — SDK handles Step 2)
       const tokenRes = await fetch(FIREBASE_TOKEN_URL);
       const tokenData = await tokenRes.json();
-
       log("Firebase response: " + JSON.stringify(tokenData));
+      const sessionToken = tokenData.data?.session_token;
+      if (!sessionToken) throw new Error("No HeyGen session token.");
 
-      const livekitUrl         = tokenData.livekit_url;
-      const livekitClientToken = tokenData.livekit_client_token;
+      // 2. Start HeyGen LiveAvatar (SDK handles /sessions/start internally)
+      avatarSession = new LiveAvatarSession(sessionToken, { voiceChat: false });
+      await avatarSession.start();
+      if (avatarSession.room) attachAvatarMedia(avatarSession.room);
 
-      if (!livekitUrl || !livekitClientToken) {
-        throw new Error("Missing LiveKit credentials from Firebase: " + JSON.stringify(tokenData));
-      }
-
-      log("Got LiveKit URL: " + livekitUrl);
-      log("Got LiveKit client token OK");
-
-      // Connect using LiveKit CDN client
-      const { Room, RoomEvent, Track } = window.LivekitClient;
-      heygenSession = new Room();
-
-      function attachTrack(track) {
-        if (track.kind === Track.Kind.Video) {
-          const video = document.createElement("video");
-          video.autoplay = true;
-          video.playsInline = true;
-          track.attach(video);
-          avatarContainer.innerHTML = "";
-          avatarContainer.appendChild(video);
-          avatarContainer.appendChild(micIndicator);
-          log("Avatar video attached OK");
-        }
-        if (track.kind === Track.Kind.Audio) {
-          const audio = document.createElement("audio");
-          audio.autoplay = true;
-          track.attach(audio);
-          document.body.appendChild(audio);
-          log("Avatar audio attached OK");
-        }
-      }
-
-      heygenSession.on(RoomEvent.TrackSubscribed, (track) => {
-        log("Track subscribed: " + track.kind);
-        attachTrack(track);
-      });
-
-      heygenSession.on(RoomEvent.Disconnected, () => {
-        log("Room disconnected");
-        setStatus("Session ended.");
-      });
-
-      heygenSession.on(RoomEvent.DataReceived, (data) => {
-        try {
-          const msg = JSON.parse(new TextDecoder().decode(data));
-          log("HeyGen data: " + JSON.stringify(msg));
-          if (msg.type === "agent.speak_started") muteMic();
-          if (msg.type === "agent.speak_ended") unmuteMic();
-        } catch(e) {}
-      });
-
-      await heygenSession.connect(livekitUrl, livekitClientToken);
-      log("LiveKit room connected OK");
-
-      // Attach any tracks already present
-      heygenSession.remoteParticipants.forEach((p) => {
-        p.trackPublications.forEach((pub) => {
-          if (pub.track) attachTrack(pub.track);
+      // 3. Get HeyGen WebSocket for lip sync
+      heygenWs = findHeyGenWs(avatarSession);
+      if (heygenWs) {
+        log("HeyGen WS found (state: " + heygenWs.readyState + ")");
+        heygenWs.addEventListener("message", (evt) => {
+          try {
+            const m = JSON.parse(evt.data);
+            log("HG event: " + m.type);
+            if (m.type === "agent.speak_ended") {
+              isSpeaking = false;
+              unmuteMic();
+              hgSend({ type: "agent.start_listening" });
+              statusEl.textContent = "Listening...";
+              log("Avatar done speaking — mic unmuted");
+            }
+          } catch(e) {}
         });
-      });
+      } else {
+        log("WARNING: No HeyGen WS found — lip sync won't work");
+      }
 
-      setStatus("Elenora is ready. Connecting voice...");
-    }
+      keepAliveInterval = setInterval(() => {
+        hgSend({ type: "session.keep_alive" });
+      }, 120000);
 
-    // =============================================
-    // ELEVENLABS SESSION
-    // =============================================
-    async function startElevenLabs() {
-      const major = majorSelect.value;
-      const context = MAJOR_CONTEXT[major] || "";
+      statusEl.textContent = "Avatar ready. Connecting voice...";
 
-      // Request mic access
-      micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-      log("Mic access granted ✓");
+      // 4. Start microphone
+      await startMicrophone();
 
-      const ElevenLabsClient = window.ElevenLabs || window.ElevenLabsClient;
+      // 5. Connect ElevenLabs
+      await connectElevenLabs();
 
-      elConversation = await ElevenLabsClient.startSession({
-        agentId: EL_AGENT_ID,
-        overrides: {
-          agent: {
-            prompt: {
-              prompt: `You are Elenora, an AI Field Guide for Hillsborough College students. ${context} Keep all responses concise — 2 to 3 sentences maximum. Be warm, encouraging, and practical. Ask one question at a time.`,
-            },
-            firstMessage: `Hi! I'm Elenora, your AI Field Guide. ${context ? "I see you're studying " + majorSelect.options[majorSelect.selectedIndex].text + " — let's explore how AI can supercharge your career. What would you like to know?" : "What field are you studying, and how can I help you explore AI today?"}`,
-          }
-        },
-        onConnect: () => {
-          log("ElevenLabs connected ✓");
-          setStatus("Connected! Speak to Elenora.");
-          setMicIndicator("live");
-          addMsg("system", "Session started. Elenora is listening.");
-        },
-        onDisconnect: () => {
-          log("ElevenLabs disconnected");
-          setMicIndicator("hidden");
-          addMsg("system", "Session ended.");
-        },
-        onMessage: ({ message, source }) => {
-          if (source === "user")  addMsg("user",  message);
-          if (source === "ai")    addMsg("agent", message);
-        },
-        onError: (err) => {
-          log("ElevenLabs error: " + err);
-          setStatus("Voice error. Please try again.");
-        },
-        onStatusChange: ({ status }) => {
-          log("EL status: " + status);
-        },
-        onModeChange: ({ mode }) => {
-          log("EL mode: " + mode);
-          if (mode === "speaking") {
-            muteMic();
-          } else if (mode === "listening") {
-            unmuteMic();
-          }
-        },
-      });
-
-      log("ElevenLabs session started ✓");
-    }
-
-    // =============================================
-    // START / STOP
-    // =============================================
-    startBtn.addEventListener("click", async () => {
-      startBtn.disabled = true;
       stopBtn.style.display = "inline-block";
-      transcript.innerHTML = "";
-      sessionActive = true;
 
-      try {
-        await startHeyGen();
-        await startElevenLabs();
-        setStatus("Session live — speak to Elenora!");
-      } catch (err) {
-        log("Startup error: " + err.message);
-        setStatus("Error: " + err.message + " — please refresh and try again.");
-        startBtn.disabled = false;
-        stopBtn.style.display = "none";
-        sessionActive = false;
-      }
-    });
-
-    stopBtn.addEventListener("click", async () => {
-      sessionActive = false;
-      setMicIndicator("hidden");
-
-      if (elConversation) {
-        try { await elConversation.endSession(); } catch(e) { log("EL end error: " + e); }
-        elConversation = null;
-      }
-
-      if (heygenSession) {
-        try { await heygenSession.stop(); } catch(e) { log("HeyGen stop error: " + e); }
-        heygenSession = null;
-      }
-
-      if (micStream) {
-        micStream.getTracks().forEach(t => t.stop());
-        micStream = null;
-      }
-
-      if (micMuteTimer) { clearTimeout(micMuteTimer); micMuteTimer = null; }
-
+    } catch (error) {
+      console.error("Startup error:", error);
+      statusEl.textContent = "Error: " + error.message;
       startBtn.disabled = false;
-      stopBtn.style.display = "none";
-      avatarContainer.innerHTML = '<div id="mic-indicator" title="Microphone status">🎙️</div>';
-      setStatus("Session ended. Click Start to reconnect.");
-    });
+      stopMicrophone();
+    }
+  });
 
-  })();
-  </script>
+  stopBtn.addEventListener("click", async () => {
+    if (keepAliveInterval) { clearInterval(keepAliveInterval); keepAliveInterval = null; }
+    if (elWs) { elWs.close(); elWs = null; }
+    stopMicrophone();
+    if (avatarSession) { try { await avatarSession.stop(); } catch(e) {} avatarSession = null; }
+    heygenWs = null;
+    if (playbackCtx) { playbackCtx.close(); playbackCtx = null; }
+    container.innerHTML = "";
+    isSpeaking = false;
+    statusEl.textContent = "Session ended.";
+    startBtn.disabled = false;
+    stopBtn.style.display = "none";
+    document.querySelectorAll("audio").forEach(a => a.remove());
+  });
+</script>
+
 </body>
 </html>
