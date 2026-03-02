@@ -214,10 +214,10 @@
 
   <div id="transcript"></div>
 
-  <p style="color:#222e3a; font-size:11px; margin-top:18px; letter-spacing:1px;">TPZ AI Field Guide &bull; v1.4 &bull; March 2026</p>
+  <p style="color:#222e3a; font-size:11px; margin-top:18px; letter-spacing:1px;">TPZ AI Field Guide &bull; v1.5 &bull; March 2026</p>
 
-  <!-- HeyGen LiveAvatar Web SDK -->
-  <script src="https://cdn.jsdelivr.net/npm/@heygen/liveavatar-web-sdk@latest/dist/index.umd.js"></script>
+  <!-- LiveKit CDN client -->
+  <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
   <!-- ElevenLabs Conversational AI -->
   <script src="https://cdn.jsdelivr.net/npm/@elevenlabs/client@latest/dist/index.umd.js"></script>
 
@@ -325,27 +325,33 @@
     }
 
     // =============================================
-    // HEYGEN SESSION (LiveAvatar Web SDK)
+    // HEYGEN SESSION (LiveKit direct)
     // =============================================
     async function startHeyGen() {
       setStatus("Connecting to Elenora...");
-      log("Fetching HeyGen session token...");
+      log("Calling Firebase for session credentials...");
 
       const tokenRes = await fetch(FIREBASE_TOKEN_URL);
       const tokenData = await tokenRes.json();
-      const sessionToken = tokenData.data?.session_token || tokenData.data?.token || tokenData.token;
-      if (!sessionToken) throw new Error("No session token received");
-      log("Got session token OK");
 
-      // Use the LiveAvatar Web SDK - this is what worked before
-      const LiveAvatarSession = window.LiveAvatarSession || window.HeyGenLiveAvatar?.LiveAvatarSession;
-      if (!LiveAvatarSession) throw new Error("LiveAvatar SDK not loaded");
+      log("Firebase response: " + JSON.stringify(tokenData));
 
-      heygenSession = new LiveAvatarSession(sessionToken, { voiceChat: false });
+      const livekitUrl         = tokenData.livekit_url;
+      const livekitClientToken = tokenData.livekit_client_token;
 
-      // Attach video/audio from the LiveKit room
+      if (!livekitUrl || !livekitClientToken) {
+        throw new Error("Missing LiveKit credentials from Firebase: " + JSON.stringify(tokenData));
+      }
+
+      log("Got LiveKit URL: " + livekitUrl);
+      log("Got LiveKit client token OK");
+
+      // Connect using LiveKit CDN client
+      const { Room, RoomEvent, Track } = window.LivekitClient;
+      heygenSession = new Room();
+
       function attachTrack(track) {
-        if (track.kind === "video") {
+        if (track.kind === Track.Kind.Video) {
           const video = document.createElement("video");
           video.autoplay = true;
           video.playsInline = true;
@@ -355,7 +361,7 @@
           avatarContainer.appendChild(micIndicator);
           log("Avatar video attached OK");
         }
-        if (track.kind === "audio") {
+        if (track.kind === Track.Kind.Audio) {
           const audio = document.createElement("audio");
           audio.autoplay = true;
           track.attach(audio);
@@ -364,26 +370,34 @@
         }
       }
 
-      await heygenSession.start();
-      log("LiveAvatar session started OK");
+      heygenSession.on(RoomEvent.TrackSubscribed, (track) => {
+        log("Track subscribed: " + track.kind);
+        attachTrack(track);
+      });
 
-      // Room is accessible as session.room after start()
-      const room = heygenSession.room;
-      if (room) {
-        log("Room state: " + room.state);
-        // Attach any already-subscribed tracks
-        room.remoteParticipants.forEach((p) => {
-          p.trackPublications.forEach((pub) => {
-            if (pub.track) attachTrack(pub.track);
-          });
+      heygenSession.on(RoomEvent.Disconnected, () => {
+        log("Room disconnected");
+        setStatus("Session ended.");
+      });
+
+      heygenSession.on(RoomEvent.DataReceived, (data) => {
+        try {
+          const msg = JSON.parse(new TextDecoder().decode(data));
+          log("HeyGen data: " + JSON.stringify(msg));
+          if (msg.type === "agent.speak_started") muteMic();
+          if (msg.type === "agent.speak_ended") unmuteMic();
+        } catch(e) {}
+      });
+
+      await heygenSession.connect(livekitUrl, livekitClientToken);
+      log("LiveKit room connected OK");
+
+      // Attach any tracks already present
+      heygenSession.remoteParticipants.forEach((p) => {
+        p.trackPublications.forEach((pub) => {
+          if (pub.track) attachTrack(pub.track);
         });
-        // Listen for new tracks
-        room.on("trackSubscribed", (track) => attachTrack(track));
-        room.on("disconnected", () => {
-          log("Room disconnected");
-          setStatus("Session ended.");
-        });
-      }
+      });
 
       setStatus("Elenora is ready. Connecting voice...");
     }
