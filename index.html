@@ -306,7 +306,8 @@
       elWs.onopen = () => {
         log("ElevenLabs WebSocket connected");
 
-        // Inject major context immediately on connect
+       // Small delay to let ElevenLabs server get ready before sending context
+        setTimeout(() => {
         elWs.send(JSON.stringify({
           type: "conversation_initiation_client_data",
           conversation_config_override: {
@@ -321,6 +322,7 @@
 
         log("Major context sent: " + majorKey);
         resolve();
+        }, 500);
       };
 
       elWs.onerror = (err) => { log("ElevenLabs WS error: " + err); reject(err); };
