@@ -214,8 +214,10 @@
 
   <div id="transcript"></div>
 
-  <!-- HeyGen Streaming SDK -->
-  <script src="https://cdn.jsdelivr.net/npm/@heygen/streaming-avatar@latest/dist/streaming-avatar.umd.js"></script>
+  <p style="color:#222e3a; font-size:11px; margin-top:18px; letter-spacing:1px;">TPZ AI Field Guide &bull; v1.4 &bull; March 2026</p>
+
+  <!-- HeyGen LiveAvatar Web SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@heygen/liveavatar-web-sdk@latest/dist/index.umd.js"></script>
   <!-- ElevenLabs Conversational AI -->
   <script src="https://cdn.jsdelivr.net/npm/@elevenlabs/client@latest/dist/index.umd.js"></script>
 
@@ -226,9 +228,9 @@
     // CONFIG — update these to match your settings
     // =============================================
     const FIREBASE_TOKEN_URL = "https://getsessiontoken-s727ay3xwq-uc.a.run.app";
-    const HEYGEN_AVATAR_ID   = "7a101569-68ae-4d6a-844e-80bbd5541dee"; // your avatar ID
+    const HEYGEN_AVATAR_ID   = "Elenora_public_3_20250101"; // your avatar ID
     const HEYGEN_VOICE_ID    = "";  // leave blank to use avatar default
-    const EL_AGENT_ID        = "agent_5801khhgn69gfg6b9zga764yhhv9*"; // replace with your agent ID
+    const EL_AGENT_ID        = "YOUR_ELEVENLABS_AGENT_ID"; // replace with your agent ID
 
     // Major → custom greeting context sent to ElevenLabs
     const MAJOR_CONTEXT = {
@@ -323,59 +325,67 @@
     }
 
     // =============================================
-    // HEYGEN SESSION
+    // HEYGEN SESSION (LiveAvatar Web SDK)
     // =============================================
     async function startHeyGen() {
-      setStatus("Connecting to Elenora…");
-      log("Fetching HeyGen session token…");
+      setStatus("Connecting to Elenora...");
+      log("Fetching HeyGen session token...");
 
       const tokenRes = await fetch(FIREBASE_TOKEN_URL);
       const tokenData = await tokenRes.json();
       const sessionToken = tokenData.data?.session_token || tokenData.data?.token || tokenData.token;
       if (!sessionToken) throw new Error("No session token received");
-      log("Got session token ✓");
+      log("Got session token OK");
 
-      // Create streaming avatar instance
-      const StreamingAvatar = window.StreamingAvatar || HeyGenStreamingAvatar;
-      heygenSession = new StreamingAvatar({ token: sessionToken });
+      // Use the LiveAvatar Web SDK - this is what worked before
+      const LiveAvatarSession = window.LiveAvatarSession || window.HeyGenLiveAvatar?.LiveAvatarSession;
+      if (!LiveAvatarSession) throw new Error("LiveAvatar SDK not loaded");
 
-      // Bind events
-      heygenSession.on("stream_ready", (e) => {
-        log("HeyGen stream ready ✓");
-        const video = document.createElement("video");
-        video.autoplay = true;
-        video.playsInline = true;
-        video.srcObject = e.detail;
-        avatarContainer.innerHTML = "";
-        avatarContainer.appendChild(video);
-        avatarContainer.appendChild(micIndicator);
-      });
+      heygenSession = new LiveAvatarSession(sessionToken, { voiceChat: false });
 
-      heygenSession.on("avatar_start_talking", () => {
-        log("Avatar started talking → muting mic");
-        muteMic();
-      });
+      // Attach video/audio from the LiveKit room
+      function attachTrack(track) {
+        if (track.kind === "video") {
+          const video = document.createElement("video");
+          video.autoplay = true;
+          video.playsInline = true;
+          track.attach(video);
+          avatarContainer.innerHTML = "";
+          avatarContainer.appendChild(video);
+          avatarContainer.appendChild(micIndicator);
+          log("Avatar video attached OK");
+        }
+        if (track.kind === "audio") {
+          const audio = document.createElement("audio");
+          audio.autoplay = true;
+          track.attach(audio);
+          document.body.appendChild(audio);
+          log("Avatar audio attached OK");
+        }
+      }
 
-      heygenSession.on("avatar_stop_talking", () => {
-        log("Avatar stopped talking → unmuting mic");
-        unmuteMic();
-      });
+      await heygenSession.start();
+      log("LiveAvatar session started OK");
 
-      heygenSession.on("stream_disconnected", () => {
-        log("HeyGen stream disconnected");
-        setStatus("Session ended.");
-      });
+      // Room is accessible as session.room after start()
+      const room = heygenSession.room;
+      if (room) {
+        log("Room state: " + room.state);
+        // Attach any already-subscribed tracks
+        room.remoteParticipants.forEach((p) => {
+          p.trackPublications.forEach((pub) => {
+            if (pub.track) attachTrack(pub.track);
+          });
+        });
+        // Listen for new tracks
+        room.on("trackSubscribed", (track) => attachTrack(track));
+        room.on("disconnected", () => {
+          log("Room disconnected");
+          setStatus("Session ended.");
+        });
+      }
 
-      // Start avatar session
-      await heygenSession.createStartAvatar({
-        avatarName: HEYGEN_AVATAR_ID,
-        ...(HEYGEN_VOICE_ID ? { voice: { voiceId: HEYGEN_VOICE_ID } } : {}),
-        language: "en",
-        quality: "medium",
-      });
-
-      log("HeyGen session started ✓");
-      setStatus("Elenora is ready. Connecting voice…");
+      setStatus("Elenora is ready. Connecting voice...");
     }
 
     // =============================================
@@ -468,7 +478,7 @@
       }
 
       if (heygenSession) {
-        try { await heygenSession.stopAvatar(); } catch(e) { log("HeyGen stop error: " + e); }
+        try { await heygenSession.stop(); } catch(e) { log("HeyGen stop error: " + e); }
         heygenSession = null;
       }
 
