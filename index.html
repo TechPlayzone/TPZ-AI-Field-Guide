@@ -15,6 +15,16 @@
     }
     h1 { color: #0097A7; font-size: 24px; margin-bottom: 4px; }
     .subtitle { color: #777; font-size: 13px; margin-bottom: 16px; }
+    #major-select-wrap { margin-bottom: 14px; }
+    #major-select-wrap label {
+      font-size: 12px; color: #667;
+      text-transform: uppercase; letter-spacing: 1px; margin-right: 8px;
+    }
+    #majorSelect {
+      background: #111827; color: #cdd;
+      border: 1px solid #1a3444; border-radius: 6px;
+      padding: 7px 12px; font-size: 13px; cursor: pointer;
+    }
     #avatar-container {
       width: 720px; height: 480px; margin: 0 auto 12px;
       background: #000; border-radius: 12px; overflow: hidden;
@@ -49,15 +59,29 @@
 <body>
 
   <h1>TPZ AI Field Guide</h1>
-  <p class="subtitle">Powered by TechPlayzone &bull; Ask Elenora anything about AI</p>
+  <p class="subtitle">Powered by TechPlayzone &bull; HCC AI Innovation Center</p>
+
+  <div id="major-select-wrap">
+    <label for="majorSelect">Your Major:</label>
+    <select id="majorSelect">
+      <option value="general">General / Exploring</option>
+      <option value="construction">Construction Management</option>
+      <option value="architecture">Architecture</option>
+      <option value="electronics">Electronics Engineering Technology</option>
+      <option value="accounting">Accounting</option>
+      <option value="business">Business &amp; Entrepreneurship</option>
+      <option value="cybersecurity">Cybersecurity</option>
+    </select>
+  </div>
+
   <div id="avatar-container"></div>
-  <p id="status">Click Start to connect with Elenora.</p>
+  <p id="status">Select your major, then click Start Session.</p>
   <div class="controls">
     <button id="startBtn">Start Session</button>
     <button id="stopBtn">End Session</button>
   </div>
   <div id="transcript"></div>
-  <p style="color:#222e3a; font-size:11px; margin-top:18px; letter-spacing:1px;">TPZ AI Field Guide &bull; v1.9 &bull; March 2026</p>
+  <p style="color:#222e3a; font-size:11px; margin-top:18px; letter-spacing:1px;">TPZ AI Field Guide &bull; v2.0 &bull; March 2026</p>
 
 <script type="module">
   import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavatar-web-sdk/+esm";
@@ -66,11 +90,51 @@
   const EL_AGENT_ID = "agent_5801khhgn69gfg6b9zga764yhhv9";
   const FIREBASE_TOKEN_URL = "https://getsessiontoken-s727ay3xwq-uc.a.run.app";
 
+  // ===== MAJOR CONTEXT =====
+  const MAJORS = {
+    general: {
+      label: "General / Exploring",
+      prompt: "The student is exploring AI generally across different fields. Help them discover how AI applies to various industries and careers.",
+      firstMessage: "Hi! I'm Elenora, your AI Field Guide at Hillsborough Community College. I'm here to help you explore how AI can impact your future career. What field are you most curious about?"
+    },
+    construction: {
+      label: "Construction Management",
+      prompt: "The student is in Construction Management. Focus on AI tools for project estimation, scheduling, site safety monitoring, BIM integration, and cost forecasting.",
+      firstMessage: "Hi! I'm Elenora, your AI Field Guide. Since you're in Construction Management, let's talk about how AI is transforming job sites — from smart scheduling to automated safety monitoring. What aspect of AI in construction interests you most?"
+    },
+    architecture: {
+      label: "Architecture",
+      prompt: "The student is in Architecture. Focus on AI for generative design, energy modeling, code compliance checking, rendering acceleration, and sustainable building analysis.",
+      firstMessage: "Hi! I'm Elenora, your AI Field Guide. As an Architecture student, you're entering a field being transformed by AI — from generative design tools to automated code compliance. What would you like to explore first?"
+    },
+    electronics: {
+      label: "Electronics Engineering Technology",
+      prompt: "The student is in Electronics Engineering Technology. Focus on AI for circuit design automation, fault diagnosis, component selection, embedded systems optimization, and predictive maintenance.",
+      firstMessage: "Hi! I'm Elenora, your AI Field Guide. Electronics Engineering is at the heart of AI hardware — from smart sensors to embedded AI systems. What area of AI in electronics are you most curious about?"
+    },
+    accounting: {
+      label: "Accounting",
+      prompt: "The student is in Accounting. Focus on AI for anomaly detection, audit automation, tax analysis, financial forecasting, fraud detection, and intelligent reporting.",
+      firstMessage: "Hi! I'm Elenora, your AI Field Guide. Accounting is being reshaped by AI — from automated audits to real-time fraud detection. What part of AI in finance or accounting would you like to explore?"
+    },
+    business: {
+      label: "Business & Entrepreneurship",
+      prompt: "The student is in Business and Entrepreneurship. Focus on AI for market research, customer segmentation, business planning, competitive analysis, and AI-powered marketing.",
+      firstMessage: "Hi! I'm Elenora, your AI Field Guide. Entrepreneurs who understand AI have a huge competitive edge right now. Let's explore how AI can power your business ideas. Where would you like to start?"
+    },
+    cybersecurity: {
+      label: "Cybersecurity",
+      prompt: "The student is in Cybersecurity. Focus on AI for threat detection, log analysis, vulnerability assessment, incident response automation, and adversarial AI awareness.",
+      firstMessage: "Hi! I'm Elenora, your AI Field Guide. Cybersecurity and AI are deeply connected — AI is both a powerful defense tool and a new attack surface. What aspect of AI in cybersecurity interests you most?"
+    }
+  };
+
   const startBtn = document.getElementById("startBtn");
   const stopBtn = document.getElementById("stopBtn");
   const statusEl = document.getElementById("status");
   const container = document.getElementById("avatar-container");
   const transcriptEl = document.getElementById("transcript");
+  const majorSelect = document.getElementById("majorSelect");
 
   let avatarSession = null;
   let heygenWs = null;
@@ -151,7 +215,7 @@
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       const legacyGetUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
       if (!legacyGetUserMedia) {
-        throw new Error("Microphone access requires HTTPS. Open: https://techplayzone.github.io/TPZ-AI-Field-Guide/");
+        throw new Error("Microphone access requires HTTPS.");
       }
       micStream = await new Promise((resolve, reject) => {
         legacyGetUserMedia.call(navigator, { audio: true }, resolve, reject);
@@ -232,12 +296,33 @@
     return null;
   }
 
-  function connectElevenLabs() {
+  function connectElevenLabs(majorKey) {
+    const major = MAJORS[majorKey] || MAJORS.general;
+
     return new Promise((resolve, reject) => {
       const url = `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=${EL_AGENT_ID}`;
       elWs = new WebSocket(url);
 
-      elWs.onopen = () => { log("ElevenLabs WebSocket connected"); resolve(); };
+      elWs.onopen = () => {
+        log("ElevenLabs WebSocket connected");
+
+        // Inject major context immediately on connect
+        elWs.send(JSON.stringify({
+          type: "conversation_initiation_client_data",
+          conversation_config_override: {
+            agent: {
+              prompt: {
+                prompt: `You are Elenora, an AI Field Guide for Hillsborough Community College students. ${major.prompt} Keep all responses concise — 2 to 3 sentences maximum. Be warm, encouraging, and practical. Ask one question at a time.`
+              },
+              first_message: major.firstMessage
+            }
+          }
+        }));
+
+        log("Major context sent: " + majorKey);
+        resolve();
+      };
+
       elWs.onerror = (err) => { log("ElevenLabs WS error: " + err); reject(err); };
       elWs.onclose = (e) => {
         log("ElevenLabs WS closed: " + e.code + " " + e.reason);
@@ -256,9 +341,8 @@
             const fmt = meta.agent_output_audio_format || "pcm_16000";
             const rate = parseInt(fmt.replace("pcm_", ""));
             if (!isNaN(rate)) elOutputRate = rate;
-            log("EL output audio: " + fmt + " (rate: " + elOutputRate + ")");
             statusEl.textContent = "Connected! Speak to Elenora.";
-            addTranscript("system", "Session started. You can speak now.");
+            addTranscript("system", "Session started. Elenora is ready.");
             hgSend({ type: "agent.start_listening" });
             break;
           }
@@ -299,7 +383,7 @@
             break;
           }
           case "interruption": {
-            log("User interrupted agent");
+            log("User interrupted");
             hgSend({ type: "agent.interrupt" });
             hgSend({ type: "agent.start_listening" });
             isSpeaking = false;
@@ -328,19 +412,18 @@
   startBtn.addEventListener("click", async () => {
     startBtn.disabled = true;
     statusEl.textContent = "Starting avatar...";
+    transcriptEl.innerHTML = "";
 
     try {
-      // 1. Get session token from Firebase (Step 1 only — SDK handles Step 2)
+      // 1. Get session token from Firebase
       const tokenRes = await fetch(FIREBASE_TOKEN_URL);
       const tokenData = await tokenRes.json();
       log("Firebase response: " + JSON.stringify(tokenData));
-      log("Full token response: " + JSON.stringify(tokenData));
-      const sessionToken = tokenData.data?.session_token 
-                  || tokenData.session_token 
-                  || tokenData.data?.data?.session_token;
+      const sessionToken = tokenData.data?.session_token
+                        || tokenData.session_token;
       if (!sessionToken) throw new Error("No HeyGen session token.");
 
-      // 2. Start HeyGen LiveAvatar (SDK handles /sessions/start internally)
+      // 2. Start HeyGen LiveAvatar
       avatarSession = new LiveAvatarSession(sessionToken, { voiceChat: false });
       await avatarSession.start();
       if (avatarSession.room) attachAvatarMedia(avatarSession.room);
@@ -358,7 +441,6 @@
               unmuteMic();
               hgSend({ type: "agent.start_listening" });
               statusEl.textContent = "Listening...";
-              log("Avatar done speaking — mic unmuted");
             }
           } catch(e) {}
         });
@@ -366,17 +448,14 @@
         log("WARNING: No HeyGen WS found — lip sync won't work");
       }
 
-      keepAliveInterval = setInterval(() => {
-        hgSend({ type: "session.keep_alive" });
-      }, 120000);
-
+      keepAliveInterval = setInterval(() => hgSend({ type: "session.keep_alive" }), 120000);
       statusEl.textContent = "Avatar ready. Connecting voice...";
 
       // 4. Start microphone
       await startMicrophone();
 
-      // 5. Connect ElevenLabs
-      await connectElevenLabs();
+      // 5. Connect ElevenLabs with selected major context
+      await connectElevenLabs(majorSelect.value);
 
       stopBtn.style.display = "inline-block";
 
