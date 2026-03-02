@@ -334,7 +334,10 @@
       const tokenRes = await fetch(FIREBASE_TOKEN_URL);
       const tokenData = await tokenRes.json();
       log("Firebase response: " + JSON.stringify(tokenData));
-      const sessionToken = tokenData.data?.session_token;
+      log("Full token response: " + JSON.stringify(tokenData));
+      const sessionToken = tokenData.data?.session_token 
+                  || tokenData.session_token 
+                  || tokenData.data?.data?.session_token;
       if (!sessionToken) throw new Error("No HeyGen session token.");
 
       // 2. Start HeyGen LiveAvatar (SDK handles /sessions/start internally)
