@@ -96,42 +96,42 @@
     general: {
       label: "General / Exploring",
       prompt: "The student is exploring AI generally across different fields. Help them discover how AI applies to various industries and careers.",
-      firstMessage: "Hi! I'm Elenora, your AI Field Guide at Hillsborough College. I'm here to help you explore how AI can impact your future career. What field are you most curious about?"
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide at Hillsborough College. I'm here to help you explore how AI can impact your future career. What field are you most curious about?"
     },
     construction: {
       label: "Construction Management",
       prompt: "The student is in Construction Management. Focus on AI tools for project estimation, scheduling, site safety monitoring, BIM integration, and cost forecasting.",
-      firstMessage: "Hi! I'm Elenora, your AI Field Guide. Since you're in Construction Management, let's talk about how AI is transforming job sites — from smart scheduling to automated safety monitoring. What aspect of AI in construction interests you most?"
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide. Since you're in Construction Management, let's talk about how AI is transforming job sites — from smart scheduling to automated safety monitoring. What aspect of AI in construction interests you most?"
     },
     architecture: {
       label: "Architecture",
       prompt: "The student is in Architecture. Focus on AI for generative design, energy modeling, code compliance checking, rendering acceleration, and sustainable building analysis.",
-      firstMessage: "Hi! I'm Elenora, your AI Field Guide. As an Architecture student, you're entering a field being transformed by AI — from generative design tools to automated code compliance. What would you like to explore first?"
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide. As an Architecture student, you're entering a field being transformed by AI — from generative design tools to automated code compliance. What would you like to explore first?"
     },
     electronics: {
       label: "Electronics Engineering Technology",
       prompt: "The student is in Electronics Engineering Technology. Focus on AI for circuit design automation, fault diagnosis, component selection, embedded systems optimization, and predictive maintenance.",
-      firstMessage: "Hi! I'm Elenora, your AI Field Guide. Electronics Engineering is at the heart of AI hardware — from smart sensors to embedded AI systems. What area of AI in electronics are you most curious about?"
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide. Electronics Engineering is at the heart of AI hardware — from smart sensors to embedded AI systems. What area of AI in electronics are you most curious about?"
     },
     accounting: {
       label: "Accounting",
       prompt: "The student is in Accounting. Focus on AI for anomaly detection, audit automation, tax analysis, financial forecasting, fraud detection, and intelligent reporting.",
-      firstMessage: "Hi! I'm Elenora, your AI Field Guide. Accounting is being reshaped by AI — from automated audits to real-time fraud detection. What part of AI in finance or accounting would you like to explore?"
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide. Accounting is being reshaped by AI — from automated audits to real-time fraud detection. What part of AI in finance or accounting would you like to explore?"
     },
     business: {
       label: "Business & Entrepreneurship",
       prompt: "The student is in Business and Entrepreneurship. Focus on AI for market research, customer segmentation, business planning, competitive analysis, and AI-powered marketing.",
-      firstMessage: "Hi! I'm Elenora, your AI Field Guide. Entrepreneurs who understand AI have a huge competitive edge right now. Let's explore how AI can power your business ideas. Where would you like to start?"
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide. Entrepreneurs who understand AI have a huge competitive edge right now. Let's explore how AI can power your business ideas. Where would you like to start?"
     },
     cloud: {
       label: "Cloud Computing",
       prompt: "The student is in Cloud Computing. Focus on AI for understanding cloud computing tools.",
-      firstMessage: "Hi! I'm Elenora, your AI Field Guide. Those who understand AI have a huge competitive edge right now. Let's explore how AI can help you with your Cloud Computing Major. Where would you like to start?"
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide. Those who understand AI have a huge competitive edge right now. Let's explore how AI can help you with your Cloud Computing Major. Where would you like to start?"
     },
     cybersecurity: {
       label: "Cybersecurity",
       prompt: "The student is in Cybersecurity. Focus on AI for threat detection, log analysis, vulnerability assessment, incident response automation, and adversarial AI awareness.",
-      firstMessage: "Hi! I'm Elenora, your AI Field Guide. Cybersecurity and AI are deeply connected — AI is both a powerful defense tool and a new attack surface. What aspect of AI in cybersecurity interests you most?"
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide. Cybersecurity and AI are deeply connected — AI is both a powerful defense tool and a new attack surface. What aspect of AI in cybersecurity interests you most?"
     }
   };
 
@@ -159,7 +159,7 @@
     transcriptEl.style.display = "block";
     const div = document.createElement("div");
     div.className = role === "user" ? "msg-user" : role === "agent" ? "msg-agent" : "msg-system";
-    div.textContent = (role === "user" ? "You: " : role === "agent" ? "Elenora: " : "") + text;
+    div.textContent = (role === "user" ? "You: " : role === "agent" ? "Wayne: " : "") + text;
     transcriptEl.appendChild(div);
     transcriptEl.scrollTop = transcriptEl.scrollHeight;
   }
@@ -319,7 +319,7 @@
           conversation_config_override: {
             agent: {
               prompt: {
-                prompt: `You are Elenora, an AI Field Guide for Hillsborough Community College students. ${major.prompt} Keep all responses concise — 2 to 3 sentences maximum. Be warm, encouraging, and practical. Ask one question at a time.`
+                prompt: `You are Wayne, an AI Field Guide for Hillsborough Community College students. ${major.prompt} Keep all responses concise — 2 to 3 sentences maximum. Be warm, encouraging, and practical. Ask one question at a time.`
               },
               first_message: major.firstMessage
             }
@@ -349,8 +349,8 @@
             const fmt = meta.agent_output_audio_format || "pcm_16000";
             const rate = parseInt(fmt.replace("pcm_", ""));
             if (!isNaN(rate)) elOutputRate = rate;
-            statusEl.textContent = "Connected! Speak to Elenora.";
-            addTranscript("system", "Session started. Elenora is ready.");
+            statusEl.textContent = "Connected! Speak to Wayne.";
+            addTranscript("system", "Session started. Wayne is ready.");
             hgSend({ type: "agent.start_listening" });
             break;
           }
@@ -366,7 +366,7 @@
                 isSpeaking = true;
                 muteMic();
                 hgSend({ type: "agent.stop_listening" });
-                statusEl.textContent = "Elenora is speaking...";
+                statusEl.textContent = "Wayne is speaking...";
               }
               bridgeAudio(audioB64);
             }
@@ -386,7 +386,7 @@
             const text = msg.agent_response_correction_event?.corrected_agent_response;
             if (text) {
               const msgs = transcriptEl.querySelectorAll(".msg-agent");
-              if (msgs.length > 0) msgs[msgs.length - 1].textContent = "Elenora: " + text;
+              if (msgs.length > 0) msgs[msgs.length - 1].textContent = "Wayne: " + text;
             }
             break;
           }
