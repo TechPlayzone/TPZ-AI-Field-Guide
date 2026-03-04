@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Desh Beta: AI In My Field Agent</title>
+  <title>Beta: AI In My Field Agent</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -377,24 +377,26 @@
 
       elWs.onopen = () => {
         log("ElevenLabs WebSocket connected");
-        // Send override IMMEDIATELY on open — no delay.
-        // ElevenLabs fires its default first_message within ~100ms of
-        // connection, so the previous 500ms delay was always too late,
-        // causing Wayne to greet with the wrong message regardless of
-        // which major was selected.
-        elWs.send(JSON.stringify({
-          type: "conversation_initiation_client_data",
-          conversation_config_override: {
-            agent: {
-              prompt: {
-                prompt: `You are Wayne, an AI Field Guide for Hillsborough Community College students. ${major.prompt} Keep all responses concise — 2 to 3 sentences maximum. Be concise and practical. Ask one question at a time.`
-              },
-              first_message: major.firstMessage
+        // 100ms delay: short enough to send before EL fires its default
+        // greeting, but long enough for EL's server to be ready to accept
+        // the override. 500ms (original) was too slow. 0ms caused multiple
+        // reconnects. 100ms is the sweet spot.
+        setTimeout(() => {
+          if (!elWs || elWs.readyState !== WebSocket.OPEN) return;
+          elWs.send(JSON.stringify({
+            type: "conversation_initiation_client_data",
+            conversation_config_override: {
+              agent: {
+                prompt: {
+                  prompt: `You are Wayne, an AI Field Guide for Hillsborough Community College students. ${major.prompt} Keep all responses concise — 2 to 3 sentences maximum. Be concise and practical. Ask one question at a time.`
+                },
+                first_message: major.firstMessage
+              }
             }
-          }
-        }));
-        log("Major context sent immediately: " + majorKey);
-        resolve();
+          }));
+          log("Major context sent (100ms): " + majorKey);
+          resolve();
+        }, 100);
       };
 
       elWs.onerror = (err) => { log("ElevenLabs WS error"); reject(err); };
@@ -421,8 +423,10 @@
             const fmt = meta.agent_output_audio_format || "pcm_16000";
             const rate = parseInt(fmt.replace("pcm_", ""));
             if (!isNaN(rate)) elOutputRate = rate;
-            statusEl.textContent = "Connected! Speak to Wayne.";
-            addTranscript("system", "Session started. Wayne is ready.");
+            if (statusEl.textContent !== "Connected! Speak to Wayne.") {
+              statusEl.textContent = "Connected! Speak to Wayne.";
+              addTranscript("system", "Session started. Wayne is ready.");
+            }
             hgSend({ type: "agent.start_listening" });
             break;
           }
