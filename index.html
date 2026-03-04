@@ -365,7 +365,7 @@ import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavat
           }));
           log("Major context sent: " + majorKey);
           resolve();
-        }, 500);
+        }, 200);
       };
 
       elWs.onerror = (err) => { log("ElevenLabs WS error"); reject(err); };
