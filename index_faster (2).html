@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Beta: AI In My Field Agent</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #1a1a2e;
+      color: white;
+      min-height: 100vh;
+    }
+    h1 { color: #0097A7; font-size: 24px; margin-bottom: 4px; }
+    .subtitle { color: #777; font-size: 13px; margin-bottom: 16px; }
+    #major-select-wrap { margin-bottom: 14px; }
+    #major-select-wrap label {
+      font-size: 12px; color: #667;
+      text-transform: uppercase; letter-spacing: 1px; margin-right: 8px;
+    }
+    #majorSelect {
+      background: #111827; color: #cdd;
+      border: 1px solid #1a3444; border-radius: 6px;
+      padding: 7px 12px; font-size: 13px; cursor: pointer;
+    }
+    #avatar-container {
+      width: 720px; height: 480px; margin: 0 auto 12px;
+      background: #000; border-radius: 12px; overflow: hidden;
+      position: relative;
+    }
+    #avatar-container video {
+      width: 100% !important; height: 100% !important; object-fit: cover !important;
+    }
+
+    /* FIX 1: Loading spinner shown while avatar warms up */
+    #loading-overlay {
+      display: none;
+      position: absolute; inset: 0;
+      background: #000;
+      border-radius: 12px;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 10;
+    }
+    #loading-overlay.visible { display: flex; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid #1a3444;
+      border-top-color: #0097A7;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { color: #aaa; font-size: 14px; }
+
+    #status { color: #aaa; margin: 8px 0 16px; font-size: 14px; min-height: 20px; }
+    .controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 12px; }
+    button {
+      padding: 12px 28px; font-size: 15px; border: none;
+      border-radius: 8px; cursor: pointer; font-weight: bold;
+    }
+    #startBtn { background: #0097A7; color: white; }
+    #startBtn:hover { background: #00838F; }
+    #startBtn:disabled { background: #444; cursor: not-allowed; }
+    #stopBtn { background: #c62828; color: white; display: none; }
+    #transcript {
+      max-width: 720px; margin: 0 auto; text-align: left;
+      background: #111; border-radius: 8px; padding: 12px;
+      max-height: 200px; overflow-y: auto; font-size: 13px;
+      display: none; line-height: 1.5;
+    }
+    .msg-user { color: #4FC3F7; margin-bottom: 4px; }
+    .msg-agent { color: #81C784; margin-bottom: 4px; }
+    .msg-system { color: #666; font-style: italic; margin-bottom: 4px; }
+    @media (max-width: 760px) {
+      #avatar-container { width: 100%; height: 56vw; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>HC AI In My Field</h1>
+  <p class="subtitle">Created by Desh Bagley using Eleven Labs and HeyGen &bull; HCC AI Innovation Center</p>
+  <div style="text-align:center;">
+    <img src="AI_center_chatgpt.png" width="60%">
+    <br><br>
+  </div>
+  <div id="major-select-wrap">
+    <label for="majorSelect">Select Your Major:</label>
+    <select id="majorSelect">
+      <option value="general">General / Exploring</option>
+      <option value="cloud">Cloud Computing</option>
+      <option value="construction">Construction Management</option>
+      <option value="architecture">Architecture</option>
+      <option value="electronics">Electronics Engineering Technology</option>
+      <option value="accounting">Accounting</option>
+      <option value="business">Business &amp; Entrepreneurship</option>
+      <option value="cybersecurity">Cybersecurity</option>
+    </select>
+  </div>
+  <p id="status">Select your major, then click Start Session.</p>
+  <div class="controls">
+    <button id="startBtn">Start Session</button>
+    <button id="stopBtn">End Session</button>
+  </div>
+
+  <div id="avatar-container">
+    <!-- FIX 1: Spinner overlay inside the avatar box -->
+    <div id="loading-overlay">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loading-text">Starting Wayne...</div>
+    </div>
+  </div>
+
+  <div id="transcript"></div>
+  <p style="color:#222e3a; font-size:11px; margin-top:18px; letter-spacing:1px;"> AI Agent &bull; v2.1 &bull; March 2026</p>
+
+<script type="module">
+  import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavatar-web-sdk/+esm";
+
+  // ===== CONFIG =====
+  const EL_AGENT_ID = "agent_5801khhgn69gfg6b9zga764yhhv9";
+  const FIREBASE_TOKEN_URL = "https://getsessiontoken-s727ay3xwq-uc.a.run.app";
+
+  // ===== MAJOR CONTEXT =====
+  const MAJORS = {
+    general: {
+      label: "General / Exploring",
+      prompt: "The student is exploring AI generally across different fields. Help them discover how AI applies to various industries and careers.",
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide at Hillsborough College. I'm here to help you explore how AI can impact your future career. What field are you most curious about?"
+    },
+    construction: {
+      label: "Construction Management",
+      prompt: "The student is in Construction Management. Focus on AI tools for project estimation, scheduling, site safety monitoring, BIM integration, and cost forecasting.",
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide. Since you're in Construction Management, let's talk about how AI is transforming job sites — from smart scheduling to automated safety monitoring. What aspect of AI in construction interests you most?"
+    },
+    architecture: {
+      label: "Architecture",
+      prompt: "The student is in Architecture. Focus on AI for generative design, energy modeling, code compliance checking, rendering acceleration, and sustainable building analysis.",
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide. As an Architecture student, you're entering a field being transformed by AI — from generative design tools to automated code compliance. What would you like to explore first?"
+    },
+    electronics: {
+      label: "Electronics Engineering Technology",
+      prompt: "The student is in Electronics Engineering Technology. Focus on AI for circuit design automation, fault diagnosis, component selection, embedded systems optimization, and predictive maintenance.",
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide. Electronics Engineering is at the heart of AI hardware — from smart sensors to embedded AI systems. What area of AI in electronics are you most curious about?"
+    },
+    accounting: {
+      label: "Accounting",
+      prompt: "The student is in Accounting. Focus on AI for anomaly detection, audit automation, tax analysis, financial forecasting, fraud detection, and intelligent reporting.",
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide. Accounting is being reshaped by AI — from automated audits to real-time fraud detection. What part of AI in finance or accounting would you like to explore?"
+    },
+    business: {
+      label: "Business & Entrepreneurship",
+      prompt: "The student is in Business and Entrepreneurship. Focus on AI for market research, customer segmentation, business planning, competitive analysis, and AI-powered marketing.",
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide. Entrepreneurs who understand AI have a huge competitive edge right now. Let's explore how AI can power your business ideas. Where would you like to start?"
+    },
+    cloud: {
+      label: "Cloud Computing",
+      prompt: "The student is in Cloud Computing. Focus on AI tools and services in major cloud platforms (AWS, Azure, GCP), MLOps pipelines, serverless AI functions, cloud-native AI APIs, and cost optimization strategies for AI workloads.",
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide. Cloud Computing and AI are deeply intertwined — every major cloud provider is racing to offer AI-native services. Let's explore how your cloud skills give you a serious advantage. What are you most curious about?"
+    },
+    cybersecurity: {
+      label: "Cybersecurity",
+      prompt: "The student is in Cybersecurity. Focus on AI for threat detection, log analysis, vulnerability assessment, incident response automation, and adversarial AI awareness.",
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide. Cybersecurity and AI are deeply connected — AI is both a powerful defense tool and a new attack surface. What aspect of AI in cybersecurity interests you most?"
+    }
+  };
+
+  const startBtn = document.getElementById("startBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  const statusEl = document.getElementById("status");
+  const container = document.getElementById("avatar-container");
+  const loadingOverlay = document.getElementById("loading-overlay");
+  const loadingText = document.getElementById("loading-text");
+  const transcriptEl = document.getElementById("transcript");
+  const majorSelect = document.getElementById("majorSelect");
+
+  let avatarSession = null;
+  let heygenWs = null;
+  let elWs = null;
+  let micStream = null;
+  let micProcessor = null;
+  let micContext = null;
+  let keepAliveInterval = null;
+  let isSpeaking = false;
+  let micMuted = false;
+  let elOutputRate = 16000;
+  let eventIdCounter = 0;
+  let audioQueue = [];
+  let isFlushingQueue = false;
+
+  // ── FIX 2: Warm up Firebase & SDK as soon as the page loads ─────────────────
+  // The biggest delay is cold-starting Firebase and loading the HeyGen SDK.
+  // We kick both off immediately on page load — before the student even
+  // picks a major — so they're ready by the time Start is clicked.
+  let prefetchedToken = null;
+  let sdkReady = false;
+
+  async function prefetchToken() {
+    try {
+      const res = await fetch(FIREBASE_TOKEN_URL);
+      const data = await res.json();
+      prefetchedToken = data.data?.session_token || data.session_token || null;
+      if (prefetchedToken) {
+        log("Token pre-fetched and ready");
+      }
+    } catch(e) {
+      log("Prefetch failed (will retry on Start): " + e.message);
+      prefetchedToken = null;
+    }
+  }
+
+  // Start prefetch immediately when page loads
+  prefetchToken();
+  // ────────────────────────────────────────────────────────────────────────────
+
+  function log(msg) { console.log("[TPZ-AI-Field-Guide]", msg); }
+
+  function nextEventId() { return String(++eventIdCounter); }
+
+  function setLoadingText(text) { loadingText.textContent = text; }
+
+  function addTranscript(role, text) {
+    transcriptEl.style.display = "block";
+    const div = document.createElement("div");
+    div.className = role === "user" ? "msg-user" : role === "agent" ? "msg-agent" : "msg-system";
+    div.textContent = (role === "user" ? "You: " : role === "agent" ? "Wayne: " : "") + text;
+    transcriptEl.appendChild(div);
+    transcriptEl.scrollTop = transcriptEl.scrollHeight;
+  }
+
+  function hgSend(data) {
+    if (heygenWs && heygenWs.readyState === WebSocket.OPEN) {
+      heygenWs.send(JSON.stringify(data));
+    }
+  }
+
+  // ── Audio Utilities ──────────────────────────────────────────────────────────
+  function resamplePCM(int16Array, srcRate, dstRate) {
+    if (srcRate === dstRate) return int16Array;
+    const ratio = srcRate / dstRate;
+    const newLen = Math.round(int16Array.length / ratio);
+    const output = new Int16Array(newLen);
+    for (let i = 0; i < newLen; i++) {
+      const srcIdx = i * ratio;
+      const idx = Math.floor(srcIdx);
+      const frac = srcIdx - idx;
+      const s0 = int16Array[idx] || 0;
+      const s1 = int16Array[Math.min(idx + 1, int16Array.length - 1)] || 0;
+      output[i] = Math.round(s0 + (s1 - s0) * frac);
+    }
+    return output;
+  }
+
+  function base64ToBytes(b64) {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+
+  function bytesToBase64(uint8) {
+    let binary = "";
+    for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
+    return btoa(binary);
+  }
+
+  function base64ToInt16(b64) {
+    return new Int16Array(base64ToBytes(b64).buffer);
+  }
+
+  function int16ToBase64(int16) {
+    return bytesToBase64(new Uint8Array(int16.buffer));
+  }
+
+  function bridgeAudio(audioBase64) {
+    const pcmOriginal = base64ToInt16(audioBase64);
+    const pcm24k = resamplePCM(pcmOriginal, elOutputRate, 24000);
+    const b64_24k = int16ToBase64(pcm24k);
+    audioQueue.push(b64_24k);
+    if (!isFlushingQueue) flushAudioQueue();
+  }
+
+  function flushAudioQueue() {
+    if (audioQueue.length === 0) { isFlushingQueue = false; return; }
+    isFlushingQueue = true;
+    const chunk = audioQueue.shift();
+    hgSend({ type: "agent.speak", event_id: nextEventId(), audio: chunk });
+    setTimeout(flushAudioQueue, 20);
+  }
+
+  async function startMicrophone() {
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
+    });
+    micContext = new AudioContext({ sampleRate: 16000 });
+    const source = micContext.createMediaStreamSource(micStream);
+    micProcessor = micContext.createScriptProcessor(4096, 1, 1);
+    micProcessor.onaudioprocess = (e) => {
+      if (!elWs || elWs.readyState !== WebSocket.OPEN || micMuted) return;
+      const float32 = e.inputBuffer.getChannelData(0);
+      const int16 = new Int16Array(float32.length);
+      for (let i = 0; i < float32.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32[i]));
+        int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      elWs.send(JSON.stringify({ user_audio_chunk: int16ToBase64(int16) }));
+    };
+    source.connect(micProcessor);
+    micProcessor.connect(micContext.destination);
+    log("Microphone started");
+  }
+
+  function stopMicrophone() {
+    if (micProcessor) { micProcessor.disconnect(); micProcessor = null; }
+    if (micContext) { micContext.close(); micContext = null; }
+    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  }
+
+  function attachAvatarMedia(room) {
+    function attachTrack(track) {
+      if (track.kind === "video") {
+        const el = track.attach();
+        container.innerHTML = "";           // clears the spinner too
+        loadingOverlay.classList.remove("visible");
+        container.appendChild(el);
+        log("Video attached — spinner hidden");
+      }
+      if (track.kind === "audio") {
+        const audioEl = track.attach();
+        audioEl.style.display = "none";
+        document.body.appendChild(audioEl);
+        log("Audio attached");
+      }
+    }
+    room.remoteParticipants.forEach((p) => {
+      p.trackPublications.forEach((pub) => {
+        if (pub.track) attachTrack(pub.track);
+      });
+    });
+    room.on("trackSubscribed", (track) => attachTrack(track));
+  }
+
+  function muteMic() {
+    if (micStream && !micMuted) {
+      micStream.getAudioTracks().forEach(t => t.enabled = false);
+      micMuted = true;
+    }
+  }
+  function unmuteMic() {
+    if (micStream && micMuted) {
+      micStream.getAudioTracks().forEach(t => t.enabled = true);
+      micMuted = false;
+    }
+  }
+
+  function findHeyGenWs(session) {
+    if (session._sessionEventSocket instanceof WebSocket) return session._sessionEventSocket;
+    for (const key of Object.keys(session)) {
+      if (session[key] instanceof WebSocket) {
+        log("WS found at session." + key);
+        return session[key];
+      }
+    }
+    return null;
+  }
+
+  function connectElevenLabs(majorKey) {
+    const major = MAJORS[majorKey] || MAJORS.general;
+    return new Promise((resolve, reject) => {
+      const url = `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=${EL_AGENT_ID}`;
+      elWs = new WebSocket(url);
+
+      elWs.onopen = () => {
+        log("ElevenLabs WebSocket connected");
+        // Send override IMMEDIATELY on open — no delay.
+        // ElevenLabs fires its default first_message within ~100ms of
+        // connection, so the previous 500ms delay was always too late,
+        // causing Wayne to greet with the wrong message regardless of
+        // which major was selected.
+        elWs.send(JSON.stringify({
+          type: "conversation_initiation_client_data",
+          conversation_config_override: {
+            agent: {
+              prompt: {
+                prompt: `You are Wayne, an AI Field Guide for Hillsborough Community College students. ${major.prompt} Keep all responses concise — 2 to 3 sentences maximum. Be concise and practical. Ask one question at a time.`
+              },
+              first_message: major.firstMessage
+            }
+          }
+        }));
+        log("Major context sent immediately: " + majorKey);
+        resolve();
+      };
+
+      elWs.onerror = (err) => { log("ElevenLabs WS error"); reject(err); };
+      elWs.onclose = (e) => {
+        log(`ElevenLabs WS closed: ${e.code} ${e.reason}`);
+        if (isSpeaking) { hgSend({ type: "agent.speak_end" }); isSpeaking = false; }
+        if (e.code !== 1000 && avatarSession) {
+          log("Unexpected close — reconnecting in 2s...");
+          statusEl.textContent = "Voice dropped. Reconnecting...";
+          setTimeout(() => connectElevenLabs(majorKey), 2000);
+        } else {
+          statusEl.textContent = "Voice disconnected.";
+        }
+      };
+
+      elWs.onmessage = (evt) => {
+        let msg;
+        try { msg = JSON.parse(evt.data); } catch { return; }
+
+        switch (msg.type) {
+          case "conversation_initiation_metadata": {
+            const meta = msg.conversation_initiation_metadata_event;
+            log("EL conversation started: " + meta.conversation_id);
+            const fmt = meta.agent_output_audio_format || "pcm_16000";
+            const rate = parseInt(fmt.replace("pcm_", ""));
+            if (!isNaN(rate)) elOutputRate = rate;
+            statusEl.textContent = "Connected! Speak to Wayne.";
+            addTranscript("system", "Session started. Wayne is ready.");
+            hgSend({ type: "agent.start_listening" });
+            break;
+          }
+          case "ping": {
+            const eventId = msg.ping_event?.event_id;
+            if (eventId !== undefined) elWs.send(JSON.stringify({ type: "pong", event_id: eventId }));
+            break;
+          }
+          case "audio": {
+            const audioB64 = msg.audio_event?.audio_base_64;
+            if (audioB64) {
+              if (!isSpeaking) {
+                isSpeaking = true;
+                muteMic();
+                hgSend({ type: "agent.stop_listening" });
+                statusEl.textContent = "Wayne is speaking...";
+              }
+              bridgeAudio(audioB64);
+            }
+            break;
+          }
+          case "user_transcript": {
+            const text = msg.user_transcription_event?.user_transcript;
+            if (text) addTranscript("user", text);
+            break;
+          }
+          case "agent_response": {
+            const text = msg.agent_response_event?.agent_response;
+            if (text) addTranscript("agent", text);
+            break;
+          }
+          case "agent_response_correction": {
+            const text = msg.agent_response_correction_event?.corrected_agent_response;
+            if (text) {
+              const msgs = transcriptEl.querySelectorAll(".msg-agent");
+              if (msgs.length > 0) msgs[msgs.length - 1].textContent = "Wayne: " + text;
+            }
+            break;
+          }
+          case "interruption": {
+            audioQueue = [];
+            hgSend({ type: "agent.interrupt" });
+            hgSend({ type: "agent.start_listening" });
+            isSpeaking = false;
+            unmuteMic();
+            statusEl.textContent = "Listening...";
+            break;
+          }
+          case "agent_response_end":
+          case "turn_end": {
+            if (isSpeaking) {
+              const waitForQueue = () => {
+                if (audioQueue.length === 0 && !isFlushingQueue) {
+                  hgSend({ type: "agent.speak_end" });
+                  hgSend({ type: "agent.start_listening" });
+                  isSpeaking = false;
+                  unmuteMic();
+                  statusEl.textContent = "Listening...";
+                } else {
+                  setTimeout(waitForQueue, 30);
+                }
+              };
+              waitForQueue();
+            }
+            break;
+          }
+          default:
+            log("EL event: " + msg.type);
+        }
+      };
+    });
+  }
+
+  // ── FIX 3: Run mic permission + ElevenLabs connect in parallel ───────────────
+  // In v2.0 these were sequential — mic first, then ElevenLabs.
+  // They don't depend on each other, so we run them simultaneously
+  // with Promise.all, saving ~500-800ms on every session start.
+
+  startBtn.addEventListener("click", async () => {
+    startBtn.disabled = true;
+    transcriptEl.innerHTML = "";
+    audioQueue = [];
+    loadingOverlay.classList.add("visible");
+    setLoadingText("Starting Wayne...");
+    statusEl.textContent = "Starting session...";
+
+    try {
+      // FIX 2: Use pre-fetched token if available, otherwise fetch now
+      let sessionToken = prefetchedToken;
+      prefetchedToken = null; // consume it — will re-prefetch after session ends
+
+      if (!sessionToken) {
+        setLoadingText("Getting session token...");
+        const tokenRes = await fetch(FIREBASE_TOKEN_URL);
+        const tokenData = await tokenRes.json();
+        sessionToken = tokenData.data?.session_token || tokenData.session_token;
+      } else {
+        log("Using pre-fetched token — skipping Firebase round trip");
+      }
+
+      if (!sessionToken) throw new Error("No HeyGen session token.");
+
+      setLoadingText("Connecting avatar...");
+      avatarSession = new LiveAvatarSession(sessionToken, { voiceChat: false });
+      await avatarSession.start();
+      if (avatarSession.room) attachAvatarMedia(avatarSession.room);
+
+      heygenWs = findHeyGenWs(avatarSession);
+      if (heygenWs) {
+        heygenWs.addEventListener("message", (evt) => {
+          try {
+            const m = JSON.parse(evt.data);
+            log("HG event: " + m.type);
+            if (m.type === "agent.speak_ended") {
+              isSpeaking = false;
+              unmuteMic();
+              hgSend({ type: "agent.start_listening" });
+              statusEl.textContent = "Listening...";
+            }
+          } catch(e) {}
+        });
+      }
+
+      keepAliveInterval = setInterval(() => hgSend({ type: "session.keep_alive" }), 20000);
+      setLoadingText("Connecting voice...");
+
+      // FIX 3: Mic + ElevenLabs in parallel instead of sequential
+      await Promise.all([
+        startMicrophone(),
+        connectElevenLabs(majorSelect.value)
+      ]);
+
+      stopBtn.style.display = "inline-block";
+
+      // Pre-fetch next token in the background so the next session starts faster
+      prefetchToken();
+
+    } catch (error) {
+      console.error("Startup error:", error);
+      statusEl.textContent = "Error: " + error.message;
+      loadingOverlay.classList.remove("visible");
+      startBtn.disabled = false;
+      stopMicrophone();
+    }
+  });
+
+  stopBtn.addEventListener("click", async () => {
+    if (keepAliveInterval) { clearInterval(keepAliveInterval); keepAliveInterval = null; }
+    if (elWs) { elWs.close(1000, "User ended session"); elWs = null; }
+    audioQueue = [];
+    stopMicrophone();
+    if (avatarSession) { try { await avatarSession.stop(); } catch(e) {} avatarSession = null; }
+    heygenWs = null;
+    container.innerHTML = "";
+    isSpeaking = false;
+    statusEl.textContent = "Session ended.";
+    startBtn.disabled = false;
+    stopBtn.style.display = "none";
+    document.querySelectorAll("audio").forEach(a => a.remove());
+  });
+</script>
+
+</body>
+</html>
