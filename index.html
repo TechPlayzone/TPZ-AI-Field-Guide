@@ -7,6 +7,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: Arial, sans-serif;
+      text-align: center;          /* ADDED: centers all inline/text content */
       padding: 20px;
       background: #1a1a2e;
       color: white;
@@ -25,7 +26,7 @@
       padding: 7px 12px; font-size: 13px; cursor: pointer;
     }
     #avatar-container {
-      width: 720px; height: 480px; margin: 0 auto 12px;
+      width: 720px; height: 480px; margin: 0 auto 12px; /* auto margins center the box */
       background: #000; border-radius: 12px; overflow: hidden;
       position: relative;
     }
@@ -33,7 +34,7 @@
       width: 100% !important; height: 100% !important; object-fit: cover !important;
     }
 
-    /* FIX 1: Loading spinner shown while avatar warms up */
+    /* Loading spinner shown while avatar warms up */
     #loading-overlay {
       display: none;
       position: absolute; inset: 0;
@@ -67,7 +68,7 @@
     #startBtn:disabled { background: #444; cursor: not-allowed; }
     #stopBtn { background: #c62828; color: white; display: none; }
     #transcript {
-      max-width: 720px; margin: 0 auto; text-align: left;
+      max-width: 720px; margin: 0 auto; text-align: left; /* auto margins center it, text stays left-aligned inside */
       background: #111; border-radius: 8px; padding: 12px;
       max-height: 200px; overflow-y: auto; font-size: 13px;
       display: none; line-height: 1.5;
@@ -108,7 +109,6 @@
   </div>
 
   <div id="avatar-container">
-    <!-- FIX 1: Spinner overlay inside the avatar box -->
     <div id="loading-overlay">
       <div class="spinner"></div>
       <div class="loading-text" id="loading-text">Starting Wayne...</div>
@@ -193,35 +193,24 @@ import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavat
   let audioQueue = [];
   let isFlushingQueue = false;
 
-  // ── FIX 2: Warm up Firebase & SDK as soon as the page loads ─────────────────
-  // The biggest delay is cold-starting Firebase and loading the HeyGen SDK.
-  // We kick both off immediately on page load — before the student even
-  // picks a major — so they're ready by the time Start is clicked.
   let prefetchedToken = null;
-  let sdkReady = false;
 
   async function prefetchToken() {
     try {
       const res = await fetch(FIREBASE_TOKEN_URL);
       const data = await res.json();
       prefetchedToken = data.data?.session_token || data.session_token || null;
-      if (prefetchedToken) {
-        log("Token pre-fetched and ready");
-      }
+      if (prefetchedToken) log("Token pre-fetched and ready");
     } catch(e) {
       log("Prefetch failed (will retry on Start): " + e.message);
       prefetchedToken = null;
     }
   }
 
-  // Start prefetch immediately when page loads
   prefetchToken();
-  // ────────────────────────────────────────────────────────────────────────────
 
   function log(msg) { console.log("[TPZ-AI-Field-Guide]", msg); }
-
   function nextEventId() { return String(++eventIdCounter); }
-
   function setLoadingText(text) { loadingText.textContent = text; }
 
   function addTranscript(role, text) {
@@ -239,7 +228,6 @@ import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavat
     }
   }
 
-  // ── Audio Utilities ──────────────────────────────────────────────────────────
   function resamplePCM(int16Array, srcRate, dstRate) {
     if (srcRate === dstRate) return int16Array;
     const ratio = srcRate / dstRate;
@@ -269,13 +257,8 @@ import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavat
     return btoa(binary);
   }
 
-  function base64ToInt16(b64) {
-    return new Int16Array(base64ToBytes(b64).buffer);
-  }
-
-  function int16ToBase64(int16) {
-    return bytesToBase64(new Uint8Array(int16.buffer));
-  }
+  function base64ToInt16(b64) { return new Int16Array(base64ToBytes(b64).buffer); }
+  function int16ToBase64(int16) { return bytesToBase64(new Uint8Array(int16.buffer)); }
 
   function bridgeAudio(audioBase64) {
     const pcmOriginal = base64ToInt16(audioBase64);
@@ -325,7 +308,7 @@ import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavat
     function attachTrack(track) {
       if (track.kind === "video") {
         const el = track.attach();
-        container.innerHTML = "";           // clears the spinner too
+        container.innerHTML = "";
         loadingOverlay.classList.remove("visible");
         container.appendChild(el);
         log("Video attached — spinner hidden");
@@ -346,25 +329,16 @@ import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavat
   }
 
   function muteMic() {
-    if (micStream && !micMuted) {
-      micStream.getAudioTracks().forEach(t => t.enabled = false);
-      micMuted = true;
-    }
+    if (micStream && !micMuted) { micStream.getAudioTracks().forEach(t => t.enabled = false); micMuted = true; }
   }
   function unmuteMic() {
-    if (micStream && micMuted) {
-      micStream.getAudioTracks().forEach(t => t.enabled = true);
-      micMuted = false;
-    }
+    if (micStream && micMuted) { micStream.getAudioTracks().forEach(t => t.enabled = true); micMuted = false; }
   }
 
   function findHeyGenWs(session) {
     if (session._sessionEventSocket instanceof WebSocket) return session._sessionEventSocket;
     for (const key of Object.keys(session)) {
-      if (session[key] instanceof WebSocket) {
-        log("WS found at session." + key);
-        return session[key];
-      }
+      if (session[key] instanceof WebSocket) { log("WS found at session." + key); return session[key]; }
     }
     return null;
   }
@@ -493,11 +467,6 @@ import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavat
     });
   }
 
-  // ── FIX 3: Run mic permission + ElevenLabs connect in parallel ───────────────
-  // In v2.0 these were sequential — mic first, then ElevenLabs.
-  // They don't depend on each other, so we run them simultaneously
-  // with Promise.all, saving ~500-800ms on every session start.
-
   startBtn.addEventListener("click", async () => {
     startBtn.disabled = true;
     transcriptEl.innerHTML = "";
@@ -507,9 +476,8 @@ import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavat
     statusEl.textContent = "Starting session...";
 
     try {
-      // FIX 2: Use pre-fetched token if available, otherwise fetch now
       let sessionToken = prefetchedToken;
-      prefetchedToken = null; // consume it — will re-prefetch after session ends
+      prefetchedToken = null;
 
       if (!sessionToken) {
         setLoadingText("Getting session token...");
@@ -546,15 +514,12 @@ import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavat
       keepAliveInterval = setInterval(() => hgSend({ type: "session.keep_alive" }), 20000);
       setLoadingText("Connecting voice...");
 
-      // FIX 3: Mic + ElevenLabs in parallel instead of sequential
       await Promise.all([
         startMicrophone(),
         connectElevenLabs(majorSelect.value)
       ]);
 
       stopBtn.style.display = "inline-block";
-
-      // Pre-fetch next token in the background so the next session starts faster
       prefetchToken();
 
     } catch (error) {
