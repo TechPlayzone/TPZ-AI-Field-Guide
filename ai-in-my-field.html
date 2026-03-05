@@ -1857,7 +1857,7 @@ function clearApiKey() {
 }
 
 // ═══════════════════ UNIFIED AI CALLER ═══════════════════
-async function callAI({ system, userMessages, maxTokens = 1000 }) {
+async function callAI({ system, userMessages, maxTokens = 2000 }) {
   if (!activeApiKey || !activeProvider) {
     throw new Error('No API key configured. Please add one on the home screen.');
   }
@@ -2103,7 +2103,8 @@ async function generateScenario() {
     } else if (uploadedFileType === 'pdf') {
       userContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: uploadedFileData } });
     } else {
-      userContent.push({ type: 'text', text: `DOCUMENT CONTENT:\n\n${uploadedFileData}` });
+      const ext = uploadedFile.name.split('.').pop().toUpperCase();
+      userContent.push({ type: 'text', text: `UPLOADED ${ext} FILE — "${uploadedFile.name}":\n\n${uploadedFileData}\n\n[End of document. Use ALL data above to generate a realistic, specific professional output — reference actual values, names, and figures from this document. Do not use placeholder or generic content.]` });
     }
 
     userContent.push({
@@ -2149,7 +2150,7 @@ Respond ONLY with valid JSON in this exact format, no other text or markdown:
     const raw_text = await callAI({
       system: systemPrompt,
       userMessages: [{ role: 'user', content: userContent }],
-      maxTokens: 1000
+      maxTokens: 3000
     });
 
     let raw = raw_text;
@@ -2397,7 +2398,7 @@ Respond in this exact JSON format only, no other text:
     let evalText = await callAI({
       system: 'You are an expert evaluator. Respond only in valid JSON.',
       userMessages: [{ role: 'user', content: systemPrompt }],
-      maxTokens: 1000
+      maxTokens: 2000
     }) || '';
     evalText = evalText.replace(/```json|```/g, '').trim();
     const result = JSON.parse(evalText);
@@ -2405,22 +2406,24 @@ Respond in this exact JSON format only, no other text:
     displayResults(result);
 
   } catch (err) {
-    // Fallback scoring if API fails
+    console.error('Evaluation error:', err);
+    // Fallback scoring if API fails or JSON parse fails
     const detected = errorsChecked.length;
-    const total = currentScenario.errors.length;
-    const ratio = detected / total;
+    const totalErrors = currentScenario.errors.length;
+    const ratio = totalErrors > 0 ? detected / totalErrors : 0;
     const score = Math.round(ratio * 70 + 15);
+    const studentText = document.getElementById('student-response').value || '';
 
     displayResults({
       scores: {
         errorDetection: Math.round(ratio * 25),
         conceptualUnderstanding: Math.round(ratio * 20 + 5),
         professionalReasoning: Math.round(ratio * 20 + 5),
-        communicationClarity: Math.round(response.length > 200 ? 18 : 12)
+        communicationClarity: Math.round(studentText.length > 200 ? 18 : 12)
       },
       total: score,
-      headline: detected === total ? 'All errors identified!' : `${detected} of ${total} errors found`,
-      feedback: `You identified ${detected} out of ${total} embedded errors. Review the professional standards associated with this scenario to strengthen your analysis.`,
+      headline: detected === totalErrors ? 'All errors identified!' : `${detected} of ${totalErrors} errors found`,
+      feedback: `You identified ${detected} out of ${totalErrors} embedded errors. Review the professional standards associated with this scenario to strengthen your analysis.`,
       errorResults: currentScenario.errors.map(e => ({
         id: e.id,
         found: checkedErrors.has(e.id),
