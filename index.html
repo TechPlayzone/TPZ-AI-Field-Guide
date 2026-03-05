@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TPZ AI Field Guide</title>
+
+  <!-- ===== Third-party Libraries ===== -->
+  <!-- Markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- Syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <!-- PDF text extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- XLSX / spreadsheet reading -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- DOCX text extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
+  <style>
+    /* ===== RESET & BASE ===== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ===== APP HEADER ===== */
+    #app-header {
+      background: #12122a;
+      padding: 8px 20px;
+      border-bottom: 1px solid #2a2a4a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      min-height: 48px;
+    }
+    #app-header h1 { color: #0097A7; font-size: 18px; letter-spacing: 0.5px; }
+    #app-header .subtitle { color: #555; font-size: 11px; margin-top: 1px; }
+    .version-badge {
+      background: #1f1b33;
+      border: 1px solid #3d3770;
+      color: #9b8fef;
+      border-radius: 12px;
+      font-size: 11px;
+      padding: 3px 10px;
+    }
+
+    /* ===== SPLIT LAYOUT — always side-by-side ===== */
+    #split-container {
+      display: flex;
+      flex-direction: row;   /* force left/right — never stack */
+      flex: 1;
+      min-height: 0;         /* allow flex children to shrink properly */
+      overflow: hidden;
+    }
+
+    /* ===== PANEL SHARED ===== */
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      border-bottom: 1px solid #2a2a4a;
+      flex-shrink: 0;
+      background: #12122a;
+    }
+    .panel-title { font-size: 14px; font-weight: 700; }
+    .panel-subtitle { font-size: 11px; color: #555; margin-top: 1px; }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s, opacity 0.2s;
+      font-family: inherit;
+    }
+
+    /* ===== LEFT PANEL — Avatar ===== */
+    #left-panel {
+      flex: 0 0 50%;
+      min-width: 0;          /* prevent overflow beyond 50% */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-y: auto;
+      border-right: 2px solid #2a2a4a;
+    }
+    #left-panel .panel-header { width: 100%; }
+    #left-panel .panel-title { color: #4FC3F7; }
+
+    .avatar-wrap {
+      width: 100%;
+      padding: 14px 16px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #avatar-container {
+      width: 100%;
+      max-width: 520px;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #2a2a4a;
+    }
+    #avatar-container video {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+    }
+
+    #status {
+      color: #888;
+      font-size: 13px;
+      margin: 10px 0 8px;
+      text-align: center;
+      min-height: 18px;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #startBtn { background: #0097A7; color: white; padding: 9px 22px; font-size: 13px; }
+    #startBtn:hover { background: #00838F; }
+    #startBtn:disabled { background: #2a2a3a; color: #555; cursor: not-allowed; }
+    #stopBtn { background: #c62828; color: white; padding: 9px 22px; font-size: 13px; display: none; }
+    #stopBtn:hover { background: #b71c1c; }
+
+    #transcript {
+      width: 100%;
+      max-width: 520px;
+      background: #0d0d1a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      max-height: 160px;
+      overflow-y: auto;
+      font-size: 12px;
+      display: none;
+      line-height: 1.6;
+      border: 1px solid #2a2a4a;
+      margin-bottom: 14px;
+    }
+    .msg-user   { color: #4FC3F7; margin-bottom: 3px; }
+    .msg-agent  { color: #81C784; margin-bottom: 3px; }
+    .msg-system { color: #444; font-style: italic; margin-bottom: 3px; font-size: 11px; }
+
+    /* ===== RIGHT PANEL — GPT Chat ===== */
+    #right-panel {
+      flex: 0 0 50%;
+      min-width: 0;          /* prevent overflow beyond 50% */
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    #right-panel .panel-title { color: #a78bfa; }
+
+    /* Settings toggle button */
+    #settingsBtn {
+      background: transparent;
+      border: 1px solid #2a2a4a;
+      border-radius: 6px;
+      color: #666;
+      padding: 5px 12px;
+      font-size: 12px;
+    }
+    #settingsBtn:hover { background: #1f1b33; color: #a78bfa; border-color: #a78bfa; }
+
+    /* Settings panel */
+    #settings-panel {
+      background: #0d0d1a;
+      border-bottom: 1px solid #2a2a4a;
+      padding: 12px 16px;
+      flex-shrink: 0;
+    }
+    #settings-panel.hidden { display: none; }
+    #settings-panel label { font-size: 11px; color: #888; display: block; margin-bottom: 5px; }
+    .settings-row { display: flex; gap: 8px; align-items: center; }
+    #apiKeyInput {
+      flex: 1;
+      padding: 7px 10px;
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 13px;
+    }
+    #apiKeyInput:focus { outline: none; border-color: #a78bfa; }
+    #saveApiKey {
+      background: #7c3aed;
+      color: white;
+      padding: 7px 16px;
+      font-size: 13px;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+    #saveApiKey:hover { background: #6d28d9; }
+    .settings-note {
+      font-size: 10px;
+      color: #4b5563;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    /* No-key landing state */
+    #no-key-notice {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: #4b5563;
+      text-align: center;
+      padding: 24px;
+    }
+    #no-key-notice .notice-icon { font-size: 44px; margin-bottom: 4px; }
+    #no-key-notice p { font-size: 13px; line-height: 1.7; color: #6b7280; }
+    #no-key-notice strong { color: #9ca3af; }
+    .hint-key { color: #a78bfa; font-weight: 600; }
+    .supported-types {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 4px;
+    }
+    .type-chip {
+      background: #1f1b33;
+      border: 1px solid #2d2a4a;
+      border-radius: 12px;
+      padding: 3px 10px;
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    /* ===== CHAT MESSAGES ===== */
+    #chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #chat-messages.active { display: flex; }
+
+    .chat-msg {
+      max-width: 90%;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-size: 13px;
+      line-height: 1.65;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
+    }
+    .chat-msg.user {
+      align-self: flex-end;
+      background: #1e3a5f;
+      border: 1px solid #1e4976;
+      border-bottom-right-radius: 4px;
+    }
+    .chat-msg.assistant {
+      align-self: flex-start;
+      background: #1a1630;
+      border: 1px solid #2d2a4a;
+      border-bottom-left-radius: 4px;
+    }
+    .chat-msg.system-notice {
+      align-self: center;
+      background: transparent;
+      color: #4b5563;
+      font-style: italic;
+      font-size: 11px;
+      padding: 4px 0;
+      max-width: 100%;
+      text-align: center;
+    }
+
+    /* Markdown inside assistant messages */
+    .chat-msg.assistant h1,
+    .chat-msg.assistant h2,
+    .chat-msg.assistant h3 { color: #c4b5fd; margin: 10px 0 4px; font-size: 14px; }
+    .chat-msg.assistant p { margin-bottom: 6px; }
+    .chat-msg.assistant ul,
+    .chat-msg.assistant ol { padding-left: 20px; margin-bottom: 6px; }
+    .chat-msg.assistant li { margin-bottom: 2px; }
+    .chat-msg.assistant a { color: #93c5fd; }
+    .chat-msg.assistant strong { color: #e5e7eb; }
+    .chat-msg.assistant em { color: #d1d5db; }
+    .chat-msg.assistant code {
+      background: #0d1117;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #7dd3fc;
+    }
+    .chat-msg.assistant pre {
+      background: #0d1117;
+      border-radius: 8px;
+      padding: 12px;
+      overflow-x: auto;
+      margin: 8px 0;
+      position: relative;
+      border: 1px solid #1e2939;
+    }
+    .chat-msg.assistant pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: 12px;
+    }
+    .copy-code-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: #1f2937;
+      border: none;
+      border-radius: 4px;
+      color: #6b7280;
+      padding: 3px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .copy-code-btn:hover { background: #374151; color: #e0e0e0; }
+
+    /* File attachment chips in messages */
+    .msg-file-chip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 5px 10px;
+      margin-top: 6px;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    .msg-file-chip-icon { font-size: 16px; }
+
+    /* Image preview inside user message */
+    .msg-img-preview {
+      max-width: 100%;
+      max-height: 180px;
+      border-radius: 8px;
+      margin-top: 6px;
+      display: block;
+      border: 1px solid #2a2a4a;
+      object-fit: cover;
+    }
+
+    /* Generated image from DALL-E */
+    .generated-img { max-width: 100%; border-radius: 10px; margin-top: 8px; display: block; }
+    .img-caption { font-size: 11px; color: #6b7280; margin-bottom: 6px; font-style: italic; }
+    .open-img-btn {
+      display: inline-block;
+      margin-top: 6px;
+      background: #1f2937;
+      color: #93c5fd;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      text-decoration: none;
+      border: 1px solid #374151;
+    }
+    .open-img-btn:hover { background: #374151; }
+
+    /* Typing indicator */
+    .typing-indicator {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      padding: 12px 14px;
+    }
+    .typing-dot {
+      width: 7px; height: 7px;
+      background: #7c3aed;
+      border-radius: 50%;
+      animation: bounce 1.2s infinite ease-in-out;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+
+    /* ===== STAGED FILES ===== */
+    #staged-files {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 0 12px;
+      flex-shrink: 0;
+      min-height: 0;
+    }
+    #staged-files:not(:empty) { padding: 8px 12px 0; }
+
+    .staged-chip {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: #1e3450;
+      border: 1px solid #2a5080;
+      border-radius: 14px;
+      padding: 4px 8px 4px 10px;
+      font-size: 12px;
+      color: #93c5fd;
+      max-width: 170px;
+    }
+    .staged-chip-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .staged-chip-remove {
+      background: none;
+      border: none;
+      color: #4b5563;
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      padding: 0 2px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .staged-chip-remove:hover { color: #ef4444; background: rgba(239,68,68,0.12); }
+
+    /* ===== CHAT INPUT AREA ===== */
+    #chat-input-area {
+      display: none;
+      align-items: flex-end;
+      gap: 8px;
+      padding: 8px 12px;
+      border-top: 1px solid #2a2a4a;
+      background: #0d0d1a;
+      flex-shrink: 0;
+    }
+    #chat-input-area.active { display: flex; }
+
+    #uploadBtn {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      color: #9ca3af;
+      padding: 8px 11px;
+      font-size: 17px;
+      flex-shrink: 0;
+      height: 40px;
+    }
+    #uploadBtn:hover { background: #374151; color: white; }
+
+    #chatInput {
+      flex: 1;
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      color: #e0e0e0;
+      padding: 9px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      resize: none;
+      min-height: 40px;
+      max-height: 120px;
+      overflow-y: auto;
+      line-height: 1.5;
+    }
+    #chatInput::placeholder { color: #4b5563; }
+    #chatInput:focus { outline: none; border-color: #7c3aed; }
+
+    #sendBtn {
+      background: #7c3aed;
+      color: white;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+      height: 40px;
+      flex-shrink: 0;
+    }
+    #sendBtn:hover { background: #6d28d9; }
+    #sendBtn:disabled { background: #2a2a3a; color: #4b5563; cursor: not-allowed; }
+
+    /* ===== FILE LEGEND ===== */
+    #file-legend {
+      text-align: center;
+      font-size: 10px;
+      color: #374151;
+      padding: 3px 12px 6px;
+      flex-shrink: 0;
+      display: none;
+    }
+    #file-legend.active { display: block; }
+
+    /* Tool integration hint */
+    #tools-hint {
+      display: none;
+      font-size: 10px;
+      color: #374151;
+      text-align: center;
+      padding: 0 12px 5px;
+      flex-shrink: 0;
+    }
+    #tools-hint.active { display: block; }
+
+    /* ===== SCROLLBARS ===== */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+    /* ===== RESPONSIVE — only stack on very small phones ===== */
+    @media (max-width: 480px) {
+      #split-container { flex-direction: column; }
+      #left-panel {
+        flex: 0 0 auto;
+        max-height: 45vh;
+        border-right: none;
+        border-bottom: 2px solid #2a2a4a;
+      }
+      #right-panel { flex: 1; min-height: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== APP HEADER ===== -->
+  <header id="app-header">
+    <div>
+      <h1>TPZ AI Field Guide</h1>
+      <div class="subtitle">Powered by TechPlayzone &bull; AI Learning Environment</div>
+    </div>
+    <span class="version-badge">v2.0</span>
+  </header>
+
+  <!-- ===== SPLIT CONTAINER ===== -->
+  <div id="split-container">
+
+    <!-- =================== LEFT: AVATAR PANEL =================== -->
+    <div id="left-panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🎙️ Ask Elenora</div>
+          <div class="panel-subtitle">Voice AI Tutor · HeyGen + ElevenLabs</div>
+        </div>
+      </div>
+
+      <div class="avatar-wrap">
+        <div id="avatar-container"></div>
+        <p id="status">Click Start to connect with Elenora.</p>
+        <div class="controls">
+          <button id="startBtn">▶ Start Session</button>
+          <button id="stopBtn">⏹ End Session</button>
+        </div>
+        <div id="transcript"></div>
+      </div>
+    </div>
+
+    <!-- =================== RIGHT: GPT CHAT PANEL =================== -->
+    <div id="right-panel">
+
+      <!-- Panel header -->
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">💬 AI Study Assistant</div>
+          <div class="panel-subtitle">Multimodal GPT-4o · Upload anything</div>
+        </div>
+        <button id="settingsBtn">⚙️ API Key</button>
+      </div>
+
+      <!-- API key settings (collapsible) -->
+      <div id="settings-panel" class="hidden">
+        <label>Anthropic API Key <span style="color:#555">(required — stored in memory only)</span></label>
+        <div class="settings-row">
+          <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off" />
+          <button id="saveApiKey">Save</button>
+        </div>
+        <p class="settings-note">
+          ⚠️ For production: route through a backend proxy (e.g. a Firebase Function) to keep keys private.<br/>
+          Coming soon: MATLAB · Splunk · and more tool integrations.
+        </p>
+      </div>
+
+      <!-- No-key landing state -->
+      <div id="no-key-notice">
+        <div class="notice-icon">🔑</div>
+        <p>Enter your <strong>Anthropic API Key</strong> to activate<br/>the multimodal Claude Study Assistant.</p>
+        <p>Click <span class="hint-key">⚙️ API Key</span> above to get started.</p>
+        <div class="supported-types">
+          <span class="type-chip">🖼️ Images</span>
+          <span class="type-chip">📄 PDF</span>
+          <span class="type-chip">📝 DOCX</span>
+          <span class="type-chip">📊 CSV · XLSX</span>
+          <span class="type-chip">💻 Code</span>
+        </div>
+        <p style="font-size:11px;margin-top:8px;">Powered by <strong>Claude</strong> — Anthropic's AI · Upload files to get started</p>
+      </div>
+
+      <!-- Chat messages -->
+      <div id="chat-messages"></div>
+
+      <!-- Staged file chips (shown above input when files are attached) -->
+      <div id="staged-files"></div>
+
+      <!-- Hidden file input -->
+      <input
+        type="file"
+        id="fileInput"
+        accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.docx,.csv,.xlsx,.xls,.txt,.py,.js,.ts,.jsx,.tsx,.java,.cpp,.c,.cs,.go,.r,.m,.sql,.html,.css,.json,.yaml,.yml,.sh,.ipynb,.md"
+        multiple
+        hidden
+      />
+
+      <!-- Chat input row -->
+      <div id="chat-input-area">
+        <button id="uploadBtn" title="Attach file — Images, PDF, DOCX, Audio, CSV, XLSX">📎</button>
+        <textarea id="chatInput" rows="1" placeholder="Ask Claude anything — or upload a file to analyze it…"></textarea>
+        <button id="sendBtn">Send ↑</button>
+      </div>
+
+      <!-- Footer legends -->
+      <div id="file-legend">📎 Drag &amp; drop files here &nbsp;·&nbsp; 🖼️ Images &nbsp;·&nbsp; 📄 PDF &nbsp;·&nbsp; 📝 DOCX &nbsp;·&nbsp; 📊 CSV/XLSX &nbsp;·&nbsp; 💻 Code</div>
+      <div id="tools-hint">🔜 Coming soon: MATLAB · Splunk · Wolfram Alpha integrations</div>
+
+    </div>
+    <!-- end #right-panel -->
+
+  </div>
+  <!-- end #split-container -->
+
+
+  <!-- ===== ALL SCRIPTS ===== -->
+  <script type="module">
+    import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavatar-web-sdk/+esm";
+
+    // =====================================================================
+    // ===== CONFIG — update these values as needed ========================
+    // =====================================================================
+    const EL_AGENT_ID        = "agent_5801khhgn69gfg6b9zga764yhhv9";
+    const FIREBASE_TOKEN_URL = "https://getsessiontoken-s727ay3xwq-uc.a.run.app";
+    const CLAUDE_MODEL       = "claude-sonnet-4-5-20250929"; // Anthropic Claude
+    const ANTHROPIC_API_URL  = "https://api.anthropic.com/v1/messages";
+    const ANTHROPIC_VERSION  = "2023-06-01";
+
+    // System prompt for the Claude Study Assistant
+    const SYSTEM_PROMPT = `You are Elenora's digital study companion for TechPlayzone (TPZ), an AI-powered STEM learning platform. Your role is to help students:
+
+- Analyze uploaded files: images, documents, audio transcripts, spreadsheets, and data files
+- Explain STEM concepts clearly with examples, analogies, and step-by-step reasoning
+- Assist with data analysis, coding, mathematics, and problem-solving
+- Prepare students for future tool integrations including MATLAB, Splunk, and other platforms
+
+Guidelines:
+- Be encouraging, patient, and educational
+- Use markdown formatting: headers, code blocks, bullet lists, bold text
+- When analyzing uploaded content, be thorough and connect it to learning objectives
+- For code, always include syntax-highlighted code blocks with explanations
+- Keep responses focused and structured`;
+
+    // =====================================================================
+    // ===== RUNTIME STATE =================================================
+    // =====================================================================
+    let claudeApiKey  = "";   // Anthropic API key (required for chat)
+    let chatHistory   = [];   // { role, content }[] for Anthropic Messages API
+    let pendingFiles  = [];   // Files staged for next message send
+
+    // =====================================================================
+    // ===== DOM REFS ======================================================
+    // =====================================================================
+    // Left panel
+    const startBtn     = document.getElementById("startBtn");
+    const stopBtn      = document.getElementById("stopBtn");
+    const statusEl     = document.getElementById("status");
+    const container    = document.getElementById("avatar-container");
+    const transcriptEl = document.getElementById("transcript");
+
+    // Right panel
+    const settingsBtn   = document.getElementById("settingsBtn");
+    const settingsPanel = document.getElementById("settings-panel");
+    const apiKeyInput   = document.getElementById("apiKeyInput");
+    const saveApiKeyBtn = document.getElementById("saveApiKey");
+    const noKeyNotice   = document.getElementById("no-key-notice");
+    const chatMessages  = document.getElementById("chat-messages");
+    const stagedFilesEl = document.getElementById("staged-files");
+    const fileInput     = document.getElementById("fileInput");
+    const uploadBtn     = document.getElementById("uploadBtn");
+    const chatInput     = document.getElementById("chatInput");
+    const sendBtn       = document.getElementById("sendBtn");
+    const chatInputArea = document.getElementById("chat-input-area");
+    const fileLegend    = document.getElementById("file-legend");
+    const toolsHint     = document.getElementById("tools-hint");
+
+    // =====================================================================
+    // ===== AVATAR STATE ==================================================
+    // =====================================================================
+    let avatarSession     = null;
+    let heygenWs          = null;
+    let elWs              = null;
+    let micStream         = null;
+    let micProcessor      = null;
+    let micContext        = null;
+    let keepAliveInterval = null;
+    let playbackCtx       = null;
+    let isSpeaking        = false;
+    let micMuted          = false;
+
+    function log(msg) { console.log("[TPZ]", msg); }
+
+    // =====================================================================
+    // ===== API KEY MANAGEMENT ============================================
+    // =====================================================================
+    settingsBtn.addEventListener("click", () => {
+      settingsPanel.classList.toggle("hidden");
+      if (!settingsPanel.classList.contains("hidden")) {
+        apiKeyInput.focus();
+      }
+    });
+
+    // Anthropic API key
+    saveApiKeyBtn.addEventListener("click", () => {
+      const key = apiKeyInput.value.trim();
+      if (!key.startsWith("sk-ant-")) {
+        alert("Please enter a valid Anthropic API key (starts with 'sk-ant-').");
+        return;
+      }
+      claudeApiKey = key;
+      apiKeyInput.value = "";
+      if (!chatMessages.classList.contains("active")) {
+        settingsPanel.classList.add("hidden");
+        activateChatPanel();
+      } else {
+        settingsPanel.classList.add("hidden");
+        addSystemNotice("✅ Anthropic API key updated.");
+      }
+    });
+
+    apiKeyInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") saveApiKeyBtn.click();
+    });
+
+    function activateChatPanel() {
+      noKeyNotice.style.display = "none";
+      chatMessages.classList.add("active");
+      chatInputArea.classList.add("active");
+      fileLegend.classList.add("active");
+      toolsHint.classList.add("active");
+      addSystemNotice("✅ Claude Study Assistant is ready. Upload files or ask me anything!");
+      chatInput.focus();
+    }
+
+    // =====================================================================
+    // ===== CHAT UI HELPERS ===============================================
+    // =====================================================================
+    function addSystemNotice(text) {
+      const div = document.createElement("div");
+      div.className = "chat-msg system-notice";
+      div.textContent = text;
+      chatMessages.appendChild(div);
+      scrollChat();
+    }
+
+    function addUserBubble(text, files) {
+      const div = document.createElement("div");
+      div.className = "chat-msg user";
+
+      if (text) {
+        const p = document.createElement("div");
+        p.textContent = text;
+        div.appendChild(p);
+      }
+
+      if (files && files.length > 0) {
+        files.forEach(f => {
+          if (f.previewUrl) {
+            const img = document.createElement("img");
+            img.src = f.previewUrl;
+            img.className = "msg-img-preview";
+            img.alt = f.name;
+            div.appendChild(img);
+          } else {
+            const chip = document.createElement("div");
+            chip.className = "msg-file-chip";
+            chip.innerHTML = `<span class="msg-file-chip-icon">${getFileIcon(f)}</span><span>${f.name}</span>`;
+            div.appendChild(chip);
+          }
+        });
+      }
+
+      chatMessages.appendChild(div);
+      scrollChat();
+    }
+
+    function addTypingIndicator() {
+      const div = document.createElement("div");
+      div.id = "typing-indicator";
+      div.className = "chat-msg assistant typing-indicator";
+      div.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+      chatMessages.appendChild(div);
+      scrollChat();
+    }
+
+    function removeTypingIndicator() {
+      const el = document.getElementById("typing-indicator");
+      if (el) el.remove();
+    }
+
+    function addAssistantBubble(markdownText) {
+      const div = document.createElement("div");
+      div.className = "chat-msg assistant";
+      div.innerHTML = renderMarkdown(markdownText);
+
+      // Apply syntax highlighting + copy buttons to code blocks
+      div.querySelectorAll("pre code").forEach(block => {
+        if (typeof hljs !== "undefined") hljs.highlightElement(block);
+        const pre = block.parentElement;
+        const btn = document.createElement("button");
+        btn.className = "copy-code-btn";
+        btn.textContent = "Copy";
+        btn.addEventListener("click", () => {
+          navigator.clipboard.writeText(block.innerText).then(() => {
+            btn.textContent = "Copied!";
+            setTimeout(() => { btn.textContent = "Copy"; }, 2000);
+          });
+        });
+        pre.appendChild(btn);
+      });
+
+      chatMessages.appendChild(div);
+      scrollChat();
+    }
+
+    function addGeneratedImageBubble(imageUrl, prompt) {
+      const div = document.createElement("div");
+      div.className = "chat-msg assistant";
+      div.innerHTML = `
+        <p class="img-caption">🎨 Generated image for: "<em>${escapeHtml(prompt)}</em>"</p>
+        <img src="${imageUrl}" class="generated-img" alt="${escapeHtml(prompt)}" />
+        <a href="${imageUrl}" target="_blank" rel="noopener" class="open-img-btn">⬇️ Open full size</a>
+      `;
+      chatMessages.appendChild(div);
+      scrollChat();
+    }
+
+    function renderMarkdown(text) {
+      if (typeof marked !== "undefined") {
+        return marked.parse(text, { breaks: true, gfm: true });
+      }
+      return escapeHtml(text).replace(/\n/g, "<br>");
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    function scrollChat() {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function getFileIcon(f) {
+      const t = (f.type || "").toLowerCase();
+      const n = (f.name || "").toLowerCase();
+      if (t.startsWith("image/"))                   return "🖼️";
+      if (t === "application/pdf" || n.endsWith(".pdf")) return "📄";
+      if (t.includes("word") || n.endsWith(".docx"))     return "📝";
+      if (t === "text/csv" || n.endsWith(".csv"))           return "📊";
+      if (n.match(/\.(xlsx|xls)$/))                         return "📊";
+      if (n.match(/\.(py|js|ts|jsx|tsx|java|cpp|c|cs|go|r|m|sql|html|css|json|yaml|yml|sh|rb|php|swift|kt|rs|scala|ipynb|md)$/)) return "💻";
+      return "📎";
+    }
+
+    // =====================================================================
+    // ===== FILE PROCESSING ===============================================
+    // =====================================================================
+    uploadBtn.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", async (e) => {
+      const files = Array.from(e.target.files);
+      for (const file of files) await stageFile(file);
+      fileInput.value = "";
+      renderStagedChips();
+    });
+
+    // Drag-and-drop onto the right panel
+    const rightPanel = document.getElementById("right-panel");
+    rightPanel.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      rightPanel.style.boxShadow = "inset 0 0 0 2px #7c3aed";
+    });
+    rightPanel.addEventListener("dragleave", () => {
+      rightPanel.style.boxShadow = "";
+    });
+    rightPanel.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      rightPanel.style.boxShadow = "";
+      if (!claudeApiKey) {
+        addSystemNotice("⚠️ Please enter your Anthropic API key first.");
+        return;
+      }
+      const files = Array.from(e.dataTransfer.files);
+      for (const file of files) await stageFile(file);
+      renderStagedChips();
+    });
+
+    async function stageFile(file) {
+      const type = file.type;
+      const name = file.name;
+      const nameLower = name.toLowerCase();
+
+      // ── Image ──
+      if (type.startsWith("image/")) {
+        const base64 = await readAsBase64(file);
+        const previewUrl = `data:${type};base64,${base64}`;
+        pendingFiles.push({ name, type, base64, previewUrl, kind: "image" });
+        return;
+      }
+
+      // ── PDF ──
+      if (type === "application/pdf" || nameLower.endsWith(".pdf")) {
+        addSystemNotice(`📄 Extracting text from ${name}…`);
+        try {
+          const buf  = await readAsArrayBuffer(file);
+          const text = await extractPdfText(buf);
+          pendingFiles.push({ name, type, text, kind: "document" });
+          addSystemNotice(`✅ PDF ready — ${text.length.toLocaleString()} characters extracted`);
+        } catch (err) {
+          addSystemNotice(`⚠️ PDF extraction failed (${err.message}) — sending filename only`);
+          pendingFiles.push({ name, type, text: `[PDF: ${name}]`, kind: "document" });
+        }
+        return;
+      }
+
+      // ── DOCX ──
+      if (type.includes("wordprocessingml") || nameLower.endsWith(".docx")) {
+        addSystemNotice(`📝 Extracting text from ${name}…`);
+        try {
+          const buf  = await readAsArrayBuffer(file);
+          const text = await extractDocxText(buf);
+          pendingFiles.push({ name, type, text, kind: "document" });
+          addSystemNotice(`✅ DOCX ready — ${text.length.toLocaleString()} characters extracted`);
+        } catch (err) {
+          addSystemNotice(`⚠️ DOCX extraction failed (${err.message})`);
+          pendingFiles.push({ name, type, text: `[Word document: ${name}]`, kind: "document" });
+        }
+        return;
+      }
+
+      // ── CSV ──
+      if (type === "text/csv" || nameLower.endsWith(".csv")) {
+        const text = await readAsText(file);
+        const preview = text.length > 4000 ? text.slice(0, 4000) + "\n…[truncated]" : text;
+        pendingFiles.push({ name, type, text: preview, kind: "data" });
+        addSystemNotice(`✅ CSV loaded — ${file.size.toLocaleString()} bytes`);
+        return;
+      }
+
+      // ── XLSX / XLS ──
+      if (nameLower.match(/\.(xlsx|xls)$/) || type.includes("spreadsheetml") || type.includes("excel")) {
+        addSystemNotice(`📊 Converting ${name} to CSV…`);
+        try {
+          const buf  = await readAsArrayBuffer(file);
+          const text = xlsxToCSV(buf);
+          pendingFiles.push({ name, type, text, kind: "data" });
+          addSystemNotice(`✅ Spreadsheet ready — ${text.length.toLocaleString()} characters`);
+        } catch (err) {
+          addSystemNotice(`⚠️ Spreadsheet conversion failed: ${err.message}`);
+        }
+        return;
+      }
+
+      // ── Code files ──
+      const CODE_EXTENSIONS = [
+        ".py",".js",".ts",".jsx",".tsx",".java",".cpp",".c",".h",".cs",
+        ".go",".r",".m",".sql",".html",".css",".json",".yaml",".yml",
+        ".sh",".bash",".rb",".php",".swift",".kt",".rs",".scala",".ipynb",".md"
+      ];
+      const ext = nameLower.substring(nameLower.lastIndexOf("."));
+      if (CODE_EXTENSIONS.includes(ext) || type.startsWith("text/")) {
+        const text = await readAsText(file);
+        const lang = detectLanguage(ext);
+        // Truncate very large files
+        const preview = text.length > 8000
+          ? text.slice(0, 8000) + `\n\n…[File truncated — ${text.length.toLocaleString()} total chars]`
+          : text;
+        pendingFiles.push({ name, type, text: preview, kind: "code", lang });
+        addSystemNotice(`✅ Code loaded: ${name} (${lang})`);
+        return;
+      }
+
+      addSystemNotice(`⚠️ Unsupported file type: ${name}`);
+    }
+
+    // ── File reading utilities ──
+    function readAsBase64(file) {
+      return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload  = e => res(e.target.result.split(",")[1]);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+    }
+    function readAsArrayBuffer(file) {
+      return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload  = e => res(e.target.result);
+        r.onerror = rej;
+        r.readAsArrayBuffer(file);
+      });
+    }
+    function readAsText(file) {
+      return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload  = e => res(e.target.result);
+        r.onerror = rej;
+        r.readAsText(file);
+      });
+    }
+
+    // ── Detect programming language from file extension ──
+    function detectLanguage(ext) {
+      const map = {
+        ".py":"python", ".js":"javascript", ".ts":"typescript",
+        ".jsx":"jsx", ".tsx":"tsx", ".java":"java",
+        ".cpp":"cpp", ".c":"c", ".h":"c", ".cs":"csharp",
+        ".go":"go", ".r":"r", ".m":"matlab", ".sql":"sql",
+        ".html":"html", ".css":"css", ".json":"json",
+        ".yaml":"yaml", ".yml":"yaml", ".sh":"bash", ".bash":"bash",
+        ".rb":"ruby", ".php":"php", ".swift":"swift", ".kt":"kotlin",
+        ".rs":"rust", ".scala":"scala", ".ipynb":"python", ".md":"markdown"
+      };
+      return map[ext] || "text";
+    }
+
+    // ── PDF text extraction (pdf.js) ──
+    async function extractPdfText(arrayBuffer) {
+      if (typeof pdfjsLib === "undefined") throw new Error("pdf.js not loaded");
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = "";
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page    = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items.map(item => item.str).join(" ");
+        fullText += `\n--- Page ${i} ---\n${pageText}`;
+      }
+      return fullText.trim();
+    }
+
+    // ── DOCX text extraction (mammoth.js) ──
+    async function extractDocxText(arrayBuffer) {
+      if (typeof mammoth === "undefined") throw new Error("mammoth.js not loaded");
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      return result.value;
+    }
+
+    // ── XLSX → CSV (SheetJS) ──
+    function xlsxToCSV(arrayBuffer) {
+      if (typeof XLSX === "undefined") throw new Error("SheetJS not loaded");
+      const wb        = XLSX.read(arrayBuffer, { type: "array" });
+      const sheetName = wb.SheetNames[0];
+      return XLSX.utils.sheet_to_csv(wb.Sheets[sheetName]);
+    }
+
+    // ── Staged chips UI ──
+    function renderStagedChips() {
+      stagedFilesEl.innerHTML = "";
+      pendingFiles.forEach((f, i) => {
+        const chip = document.createElement("div");
+        chip.className = "staged-chip";
+        chip.innerHTML = `
+          <span>${getFileIcon(f)}</span>
+          <span class="staged-chip-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span>
+          <button class="staged-chip-remove" data-idx="${i}" title="Remove">×</button>
+        `;
+        stagedFilesEl.appendChild(chip);
+      });
+      stagedFilesEl.querySelectorAll(".staged-chip-remove").forEach(btn => {
+        btn.addEventListener("click", () => {
+          pendingFiles.splice(parseInt(btn.dataset.idx), 1);
+          renderStagedChips();
+        });
+      });
+    }
+
+    // =====================================================================
+    // ===== SEND MESSAGE ==================================================
+    // =====================================================================
+    sendBtn.addEventListener("click", sendMessage);
+    chatInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Auto-resize textarea
+    chatInput.addEventListener("input", () => {
+      chatInput.style.height = "auto";
+      chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + "px";
+    });
+
+    async function sendMessage() {
+      const text  = chatInput.value.trim();
+      const files = [...pendingFiles];
+      if (!text && files.length === 0) return;
+      if (!claudeApiKey) { addSystemNotice("⚠️ Please set your Anthropic API key first."); return; }
+
+      // Clear UI
+      chatInput.value = "";
+      chatInput.style.height = "auto";
+      pendingFiles = [];
+      renderStagedChips();
+      sendBtn.disabled = true;
+
+      // Show user bubble
+      addUserBubble(text, files);
+
+      // ── Claude chat ──
+      const content = buildMessageContent(text, files);
+      chatHistory.push({ role: "user", content });
+
+      addTypingIndicator();
+      try {
+        const resp          = await callClaudeAPI();
+        const assistantText = resp.content[0].text;  // Anthropic response format
+        chatHistory.push({ role: "assistant", content: assistantText });
+        removeTypingIndicator();
+        addAssistantBubble(assistantText);
+      } catch (err) {
+        removeTypingIndicator();
+        addAssistantBubble(`❌ **Error:** ${err.message}\n\nPlease check your Anthropic API key and try again.`);
+      }
+
+      sendBtn.disabled = false;
+    }
+
+    // Build Anthropic message content (text, images, document extracts)
+    function buildMessageContent(text, files) {
+      const hasImages = files.some(f => f.kind === "image");
+      if (!hasImages && files.length === 0) return text; // simple string
+
+      const parts = [];
+
+      // Images first (Anthropic recommends placing images before text)
+      files.filter(f => f.kind === "image").forEach(f => {
+        parts.push({
+          type: "image",
+          source: {
+            type:       "base64",
+            media_type: f.type,   // e.g. "image/png", "image/jpeg"
+            data:       f.base64
+          }
+        });
+      });
+
+      // Text prompt
+      if (text) parts.push({ type: "text", text });
+
+      // Text-based file contents (documents, audio transcripts, data, code)
+      files.filter(f => f.kind !== "image").forEach(f => {
+        const labels = {
+          document: "📄 Document",
+          audio:    "🎵 Audio Transcript",
+          data:     "📊 Data File",
+          text:     "📝 Text File",
+          code:     `💻 Code File`
+        };
+        const label    = labels[f.kind] || "📎 File";
+        // Use language identifier for code blocks so Claude gets syntax context
+        const fence    = f.kind === "code" ? f.lang || "" : "";
+        parts.push({
+          type: "text",
+          text: `\n\n${label} — "${f.name}":\n\`\`\`${fence}\n${f.text}\n\`\`\``
+        });
+      });
+
+      // If only a single text part with no images, return as plain string
+      if (parts.length === 1 && parts[0].type === "text") return parts[0].text;
+      return parts;
+    }
+
+    // Call Anthropic Claude Messages API
+    async function callClaudeAPI() {
+      const res = await fetch(ANTHROPIC_API_URL, {
+        method:  "POST",
+        headers: {
+          "x-api-key":                              claudeApiKey,
+          "anthropic-version":                      ANTHROPIC_VERSION,
+          "anthropic-dangerous-direct-browser-access": "true",
+          "Content-Type":                           "application/json"
+        },
+        body: JSON.stringify({
+          model:      CLAUDE_MODEL,
+          max_tokens: 4096,
+          system:     SYSTEM_PROMPT,   // Anthropic takes system as top-level param
+          messages:   chatHistory
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error?.message || `Anthropic API error ${res.status}`);
+      }
+      return res.json();
+    }
+
+    // =====================================================================
+    // ===== AVATAR — all original logic preserved =========================
+    // =====================================================================
+
+    // Transcript
+    function addTranscript(role, text) {
+      transcriptEl.style.display = "block";
+      const div = document.createElement("div");
+      div.className = role === "user" ? "msg-user" : role === "agent" ? "msg-agent" : "msg-system";
+      div.textContent = (role === "user" ? "You: " : role === "agent" ? "Elenora: " : "") + text;
+      transcriptEl.appendChild(div);
+      transcriptEl.scrollTop = transcriptEl.scrollHeight;
+    }
+
+    // HeyGen WebSocket send helper
+    function hgSend(data) {
+      if (heygenWs && heygenWs.readyState === WebSocket.OPEN) {
+        heygenWs.send(JSON.stringify(data));
+      }
+    }
+
+    // PCM resampling
+    function resamplePCM(int16Array, srcRate, dstRate) {
+      if (srcRate === dstRate) return int16Array;
+      const ratio  = srcRate / dstRate;
+      const newLen = Math.round(int16Array.length / ratio);
+      const output = new Int16Array(newLen);
+      for (let i = 0; i < newLen; i++) {
+        const srcIdx = i * ratio;
+        const idx    = Math.floor(srcIdx);
+        const frac   = srcIdx - idx;
+        const s0     = int16Array[idx] || 0;
+        const s1     = int16Array[Math.min(idx + 1, int16Array.length - 1)] || 0;
+        output[i] = Math.round(s0 + (s1 - s0) * frac);
+      }
+      return output;
+    }
+
+    function base64ToBytes(b64) {
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    }
+    function bytesToBase64(uint8) {
+      let bin = "";
+      for (let i = 0; i < uint8.length; i++) bin += String.fromCharCode(uint8[i]);
+      return btoa(bin);
+    }
+    function base64ToInt16(b64) { return new Int16Array(base64ToBytes(b64).buffer); }
+    function int16ToBase64(i16) { return bytesToBase64(new Uint8Array(i16.buffer)); }
+
+    // Bridge: ElevenLabs audio → HeyGen lip sync
+    let elOutputRate = 16000;
+    function bridgeAudio(audioBase64) {
+      const pcmOriginal = base64ToInt16(audioBase64);
+      const pcm24k      = resamplePCM(pcmOriginal, elOutputRate, 24000);
+      hgSend({ type: "agent.speak", audio: int16ToBase64(pcm24k) });
+    }
+
+    // Microphone capture → ElevenLabs
+    async function startMicrophone() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        const legacy = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+        if (!legacy) throw new Error("Microphone requires HTTPS: https://techplayzone.github.io/TPZ-AI-Field-Guide/");
+        micStream = await new Promise((res, rej) => legacy.call(navigator, { audio: true }, res, rej));
+      } else {
+        micStream = await navigator.mediaDevices.getUserMedia({
+          audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
+        });
+      }
+      micContext   = new AudioContext({ sampleRate: 16000 });
+      const source = micContext.createMediaStreamSource(micStream);
+      micProcessor = micContext.createScriptProcessor(4096, 1, 1);
+      micProcessor.onaudioprocess = (e) => {
+        if (!elWs || elWs.readyState !== WebSocket.OPEN) return;
+        const f32   = e.inputBuffer.getChannelData(0);
+        const int16 = new Int16Array(f32.length);
+        for (let i = 0; i < f32.length; i++) {
+          const s = Math.max(-1, Math.min(1, f32[i]));
+          int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        elWs.send(JSON.stringify({ user_audio_chunk: int16ToBase64(int16) }));
+      };
+      source.connect(micProcessor);
+      micProcessor.connect(micContext.destination);
+      log("Microphone started");
+    }
+
+    function stopMicrophone() {
+      if (micProcessor) { micProcessor.disconnect(); micProcessor = null; }
+      if (micContext)   { micContext.close();         micContext   = null; }
+      if (micStream)    { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+    }
+
+    // Attach HeyGen video + audio tracks
+    function attachAvatarMedia(room) {
+      function attachTrack(track) {
+        if (track.kind === "video") {
+          const el = track.attach();
+          container.innerHTML = "";
+          container.appendChild(el);
+          log("Video attached");
+        }
+        if (track.kind === "audio") {
+          const audioEl = track.attach();
+          audioEl.style.display = "none";
+          document.body.appendChild(audioEl);
+          log("Audio attached");
+        }
+      }
+      room.remoteParticipants.forEach(p => {
+        p.trackPublications.forEach(pub => { if (pub.track) attachTrack(pub.track); });
+      });
+      room.on("trackSubscribed", track => attachTrack(track));
+    }
+
+    // Mic muting (prevent echo when avatar speaks)
+    function muteMic()   { if (micStream && !micMuted) { micStream.getAudioTracks().forEach(t => t.enabled = false); micMuted = true; } }
+    function unmuteMic() { if (micStream &&  micMuted) { micStream.getAudioTracks().forEach(t => t.enabled = true);  micMuted = false; } }
+
+    // Find HeyGen internal WebSocket
+    function findHeyGenWs(session) {
+      if (session._sessionEventSocket instanceof WebSocket) return session._sessionEventSocket;
+      for (const key of Object.keys(session)) {
+        if (session[key] instanceof WebSocket) { log("HG WS at: session." + key); return session[key]; }
+      }
+      return null;
+    }
+
+    // Connect ElevenLabs Conversational AI WebSocket
+    function connectElevenLabs() {
+      return new Promise((resolve, reject) => {
+        const url = `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=${EL_AGENT_ID}`;
+        elWs = new WebSocket(url);
+
+        elWs.onopen  = () => { log("ElevenLabs WS connected"); resolve(); };
+        elWs.onerror = (err) => { log("EL error"); reject(err); };
+        elWs.onclose = (e) => {
+          log("EL closed: " + e.code);
+          if (isSpeaking) { hgSend({ type: "agent.speak_end" }); isSpeaking = false; }
+          statusEl.textContent = "Voice disconnected.";
+        };
+
+        elWs.onmessage = (evt) => {
+          let msg;
+          try { msg = JSON.parse(evt.data); } catch { return; }
+
+          switch (msg.type) {
+            case "conversation_initiation_metadata": {
+              const meta = msg.conversation_initiation_metadata_event;
+              log("EL conversation: " + meta.conversation_id);
+              const fmt  = meta.agent_output_audio_format || "pcm_16000";
+              const rate = parseInt(fmt.replace("pcm_", ""));
+              if (!isNaN(rate)) elOutputRate = rate;
+              statusEl.textContent = "Connected! Speak to Elenora.";
+              addTranscript("system", "Session started. You can speak now.");
+              hgSend({ type: "agent.start_listening" });
+              break;
+            }
+            case "ping": {
+              const eventId = msg.ping_event?.event_id;
+              if (eventId !== undefined) elWs.send(JSON.stringify({ type: "pong", event_id: eventId }));
+              break;
+            }
+            case "audio": {
+              const audioB64 = msg.audio_event?.audio_base_64;
+              if (audioB64) {
+                if (!isSpeaking) {
+                  isSpeaking = true;
+                  muteMic();
+                  hgSend({ type: "agent.stop_listening" });
+                  statusEl.textContent = "Elenora is speaking…";
+                }
+                bridgeAudio(audioB64);
+              }
+              break;
+            }
+            case "user_transcript": {
+              const t = msg.user_transcription_event?.user_transcript;
+              if (t) addTranscript("user", t);
+              break;
+            }
+            case "agent_response": {
+              const t = msg.agent_response_event?.agent_response;
+              if (t) addTranscript("agent", t);
+              break;
+            }
+            case "agent_response_correction": {
+              const t = msg.agent_response_correction_event?.corrected_agent_response;
+              if (t) {
+                const msgs = transcriptEl.querySelectorAll(".msg-agent");
+                if (msgs.length > 0) msgs[msgs.length - 1].textContent = "Elenora: " + t;
+              }
+              break;
+            }
+            case "interruption": {
+              log("User interrupted");
+              hgSend({ type: "agent.interrupt" });
+              hgSend({ type: "agent.start_listening" });
+              isSpeaking = false;
+              unmuteMic();
+              statusEl.textContent = "Listening…";
+              break;
+            }
+            case "agent_response_end":
+            case "turn_end": {
+              if (isSpeaking) {
+                hgSend({ type: "agent.speak_end" });
+                hgSend({ type: "agent.start_listening" });
+                isSpeaking = false;
+                unmuteMic();
+                statusEl.textContent = "Listening…";
+              }
+              break;
+            }
+            default:
+              log("EL event: " + msg.type);
+          }
+        };
+      });
+    }
+
+    // ===== START SESSION =====
+    startBtn.addEventListener("click", async () => {
+      startBtn.disabled = true;
+      statusEl.textContent = "Starting avatar…";
+      try {
+        // 1. HeyGen session token
+        const tokenRes   = await fetch(FIREBASE_TOKEN_URL);
+        const tokenData  = await tokenRes.json();
+        const sessionToken = tokenData.data?.session_token;
+        if (!sessionToken) throw new Error("No HeyGen session token received.");
+
+        // 2. Start HeyGen LiveAvatar
+        avatarSession = new LiveAvatarSession(sessionToken, { voiceChat: false });
+        await avatarSession.start();
+        if (avatarSession.room) attachAvatarMedia(avatarSession.room);
+
+        // 3. HeyGen WebSocket
+        heygenWs = findHeyGenWs(avatarSession);
+        if (heygenWs) {
+          log("HeyGen WS ✓ (state: " + heygenWs.readyState + ")");
+          heygenWs.addEventListener("message", (evt) => {
+            try {
+              const m = JSON.parse(evt.data);
+              log("HG: " + m.type);
+              if (m.type === "agent.speak_ended") {
+                isSpeaking = false;
+                unmuteMic();
+                hgSend({ type: "agent.start_listening" });
+                statusEl.textContent = "Listening…";
+              }
+            } catch(e) {}
+          });
+        } else {
+          log("WARNING: HeyGen WS not found — lip sync may not work");
+        }
+
+        keepAliveInterval = setInterval(() => hgSend({ type: "session.keep_alive" }), 120000);
+        statusEl.textContent = "Avatar ready. Connecting voice…";
+
+        // 4. Microphone
+        await startMicrophone();
+
+        // 5. ElevenLabs
+        await connectElevenLabs();
+
+        stopBtn.style.display = "inline-block";
+      } catch (error) {
+        console.error("Startup error:", error);
+        statusEl.textContent = "Error: " + error.message;
+        startBtn.disabled = false;
+        stopMicrophone();
+      }
+    });
+
+    // ===== STOP SESSION =====
+    stopBtn.addEventListener("click", async () => {
+      if (keepAliveInterval) { clearInterval(keepAliveInterval); keepAliveInterval = null; }
+      if (elWs)              { elWs.close();                    elWs = null; }
+      stopMicrophone();
+      if (avatarSession) { try { await avatarSession.stop(); } catch(e) {} avatarSession = null; }
+      heygenWs = null;
+      if (playbackCtx)   { playbackCtx.close(); playbackCtx = null; }
+      container.innerHTML = "";
+      isSpeaking = false;
+      statusEl.textContent = "Session ended.";
+      startBtn.disabled = false;
+      stopBtn.style.display = "none";
+    });
+
+  </script>
+</body>
+</html>
