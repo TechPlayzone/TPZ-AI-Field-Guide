@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TPZ AI Field Guide — AI in My Field</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #1a1a2e;
+      --surface: #16213e;
+      --card:    #0f3460;
+      --border:  #2a2a5a;
+      --text:    #e0e0e0;
+      --muted:   #8888aa;
+      --accent:  #7c6af7;
+      --radius:  12px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+    .logo { font-size: 1.35rem; font-weight: 800; color: var(--accent); }
+    .logo-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+    #breadcrumb {
+      margin-left: auto;
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: none;
+      align-items: center;
+      gap: 6px;
+    }
+    #breadcrumb .bc-active { color: var(--text); }
+    #btn-back {
+      display: none;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    #btn-back:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── SCREENS ── */
+    .screen { display: none; flex: 1; flex-direction: column; overflow: auto; }
+    .screen.active { display: flex; }
+    #screen-chat { overflow: hidden; }
+
+    /* ════════════════════════════
+       SETUP SCREEN
+    ════════════════════════════ */
+    #screen-setup {
+      justify-content: center;
+      align-items: center;
+      padding: 40px 20px;
+    }
+    .setup-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 48px;
+      max-width: 460px;
+      width: 100%;
+      text-align: center;
+    }
+    .setup-card h2 { font-size: 1.6rem; margin-bottom: 8px; }
+    .setup-card p { color: var(--muted); font-size: 0.9rem; margin-bottom: 28px; line-height: 1.6; }
+    .setup-card input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.95rem;
+      margin-bottom: 16px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .setup-card input:focus { border-color: var(--accent); }
+    .btn-primary {
+      width: 100%;
+      padding: 13px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+    .setup-note { font-size: 0.72rem; color: var(--muted); margin-top: 14px; }
+
+    /* ════════════════════════════
+       DASHBOARD SCREEN
+    ════════════════════════════ */
+    #screen-dashboard { padding: 40px 48px; }
+    .dash-header { margin-bottom: 32px; }
+    .dash-header h1 { font-size: 1.9rem; font-weight: 800; }
+    .dash-header p { color: var(--muted); margin-top: 8px; font-size: 0.95rem; }
+    .disciplines-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 20px;
+    }
+    .discipline-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      cursor: pointer;
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .discipline-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: var(--disc-color, var(--accent));
+    }
+    .discipline-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--disc-color, var(--accent));
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .disc-icon { font-size: 2.2rem; margin-bottom: 14px; }
+    .disc-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+    .disc-program { font-size: 0.75rem; color: var(--muted); margin-bottom: 12px; }
+    .disc-tagline { font-size: 0.82rem; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
+    .disc-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--disc-color, var(--accent));
+      border: 1px solid var(--disc-color, var(--accent));
+    }
+
+    /* ════════════════════════════
+       SCENARIO SCREEN
+    ════════════════════════════ */
+    #screen-scenarios { padding: 36px 48px; }
+    .scenario-header { margin-bottom: 28px; }
+    .scenario-header h2 { font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    .scenario-header p { color: var(--muted); margin-top: 6px; font-size: 0.88rem; }
+    .scenarios-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 20px;
+    }
+    .scenario-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      cursor: pointer;
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+      display: flex;
+      flex-direction: column;
+    }
+    .scenario-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--disc-color, var(--accent));
+      box-shadow: 0 6px 24px rgba(0,0,0,0.3);
+    }
+    .sc-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
+    .sc-subtitle { font-size: 0.85rem; color: var(--muted); line-height: 1.55; margin-bottom: 14px; flex: 1; }
+    .sc-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .sc-tag {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      background: rgba(255,255,255,0.05);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .sc-duration { font-size: 0.78rem; color: var(--muted); margin-bottom: 18px; }
+    .sc-duration strong { color: var(--text); }
+    .btn-launch {
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: #fff;
+      transition: opacity .2s;
+    }
+    .btn-launch:hover { opacity: 0.85; }
+
+    /* ════════════════════════════
+       CHAT SCREEN
+    ════════════════════════════ */
+    #screen-chat {
+      height: calc(100vh - 57px);
+    }
+    .chat-banner {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+    .chat-banner .sc-name { font-weight: 700; font-size: 0.95rem; }
+    .chat-banner .sc-prog { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .chat-skills { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+    .skill-chip {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-export {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      border-radius: 8px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all .2s;
+      white-space: nowrap;
+      margin-left: 10px;
+    }
+    .btn-export:hover { border-color: var(--accent); color: var(--accent); }
+
+    #chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    #chat-messages::-webkit-scrollbar { width: 5px; }
+    #chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .msg-wrap { display: flex; flex-direction: column; gap: 5px; }
+    .msg {
+      max-width: 82%;
+      padding: 14px 18px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      line-height: 1.65;
+    }
+    .msg.user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .msg.ai {
+      align-self: flex-start;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .msg.sys-note {
+      align-self: center;
+      background: rgba(124,106,247,0.08);
+      border: 1px dashed rgba(124,106,247,0.4);
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-align: center;
+      max-width: 65%;
+    }
+    .msg-label { font-size: 0.7rem; color: var(--muted); padding: 0 4px; }
+    .msg-label.right { align-self: flex-end; }
+
+    /* Markdown styles */
+    .msg.ai table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.86rem; }
+    .msg.ai th { background: rgba(255,255,255,0.07); padding: 8px 12px; text-align: left; border: 1px solid var(--border); font-size: 0.82rem; }
+    .msg.ai td { padding: 8px 12px; border: 1px solid var(--border); vertical-align: top; }
+    .msg.ai tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+    .msg.ai code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; font-size: 0.84em; }
+    .msg.ai pre { background: #0d1117; border-radius: 8px; padding: 12px; overflow-x: auto; margin: 8px 0; }
+    .msg.ai pre code { background: none; padding: 0; }
+    .msg.ai ul, .msg.ai ol { padding-left: 20px; margin: 6px 0; }
+    .msg.ai li { margin: 3px 0; }
+    .msg.ai p { margin: 6px 0; }
+    .msg.ai p:first-child { margin-top: 0; }
+    .msg.ai p:last-child  { margin-bottom: 0; }
+    .msg.ai h3, .msg.ai h4 { margin: 10px 0 6px; }
+    .msg.ai strong { color: #fff; }
+    .msg.ai blockquote { border-left: 3px solid var(--accent); padding-left: 12px; color: var(--muted); margin: 8px 0; }
+
+    /* Reflection box */
+    .reflection-box {
+      align-self: flex-start;
+      max-width: 78%;
+      background: rgba(124,106,247,0.07);
+      border: 1px solid rgba(124,106,247,0.25);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .reflection-toggle {
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+      transition: background .2s;
+    }
+    .reflection-toggle:hover { background: rgba(124,106,247,0.08); }
+    .reflection-content { display: none; padding: 0 16px 14px; }
+    .reflection-content.open { display: block; }
+    .reflection-content p { font-size: 0.78rem; color: var(--muted); margin-bottom: 8px; font-style: italic; }
+    .reflection-content ol { padding-left: 18px; }
+    .reflection-content li { font-size: 0.82rem; color: var(--text); margin: 6px 0; line-height: 1.5; }
+
+    /* Typing indicator */
+    .typing {
+      align-self: flex-start;
+      display: flex;
+      gap: 5px;
+      padding: 12px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      border-bottom-left-radius: 4px;
+    }
+    .typing span {
+      width: 7px; height: 7px;
+      background: var(--muted);
+      border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: .2s; }
+    .typing span:nth-child(3) { animation-delay: .4s; }
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-7px); }
+    }
+
+    /* File chips */
+    #file-preview-area { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 20px 0; }
+    .file-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.75rem;
+    }
+    .file-chip button { background: none; border: none; color: var(--muted); cursor: pointer; line-height: 1; padding: 0 2px; }
+    .file-chip button:hover { color: #ff6b6b; }
+
+    /* Chat input */
+    .chat-input-area {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 14px 20px;
+      flex-shrink: 0;
+    }
+    .chat-input-row { display: flex; gap: 8px; align-items: flex-end; }
+    .chat-input-row textarea {
+      flex: 1;
+      padding: 11px 15px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.9rem;
+      resize: none;
+      min-height: 46px;
+      max-height: 160px;
+      outline: none;
+      line-height: 1.5;
+      font-family: inherit;
+      transition: border-color .2s;
+    }
+    .chat-input-row textarea:focus { border-color: var(--accent); }
+    .chat-input-row textarea::placeholder { color: var(--muted); }
+    .icon-btn {
+      width: 40px; height: 40px;
+      border-radius: 9px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .2s;
+      flex-shrink: 0;
+    }
+    .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+    #send-btn {
+      width: 40px; height: 40px;
+      border-radius: 9px;
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity .2s;
+      flex-shrink: 0;
+    }
+    #send-btn:hover { opacity: 0.85; }
+    #send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .input-hint { font-size: 0.7rem; color: var(--muted); margin-top: 6px; }
+    #file-input { display: none; }
+
+    @media (max-width: 600px) {
+      #screen-dashboard, #screen-scenarios { padding: 24px 16px; }
+      .disciplines-grid, .scenarios-grid { grid-template-columns: 1fr; }
+      .setup-card { padding: 32px 20px; }
+      .chat-skills { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div>
+    <div class="logo">TPZ AI Field Guide</div>
+    <div class="logo-sub">AI in My Field — Career Development Scenarios</div>
+  </div>
+  <div id="breadcrumb">
+    <span id="bc-disc"></span>
+    <span id="bc-sep" style="display:none"> › </span>
+    <span id="bc-scen" class="bc-active"></span>
+  </div>
+  <button id="btn-back" onclick="goBack()">← Back</button>
+</header>
+
+<!-- SCREEN: SETUP -->
+<div class="screen active" id="screen-setup">
+  <div class="setup-card">
+    <div style="font-size:2.8rem;margin-bottom:16px">🎓</div>
+    <h2>AI in My Field</h2>
+    <p>Practice real workplace AI tasks in your degree program. Enter your Anthropic API key to get started.</p>
+    <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." autocomplete="off"
+      onkeydown="if(event.key==='Enter')startApp()" />
+    <button class="btn-primary" onclick="startApp()">Get Started →</button>
+    <p class="setup-note">Your key is used only in your browser and never stored or sent to any server other than Anthropic.</p>
+  </div>
+</div>
+
+<!-- SCREEN: DASHBOARD -->
+<div class="screen" id="screen-dashboard">
+  <div class="dash-header">
+    <h1>Select Your Field</h1>
+    <p>Choose your A.S. degree program to access AI scenarios designed for your profession.</p>
+  </div>
+  <div class="disciplines-grid" id="disciplines-grid"></div>
+</div>
+
+<!-- SCREEN: SCENARIOS -->
+<div class="screen" id="screen-scenarios">
+  <div class="scenario-header" id="scenario-header"></div>
+  <div class="scenarios-grid" id="scenarios-grid"></div>
+</div>
+
+<!-- SCREEN: CHAT -->
+<div class="screen" id="screen-chat">
+  <div class="chat-banner">
+    <div>
+      <div class="sc-name" id="chat-sc-name">—</div>
+      <div class="sc-prog" id="chat-sc-prog">—</div>
+    </div>
+    <div class="chat-skills" id="chat-skills"></div>
+    <button class="btn-export" onclick="exportSession()">⬇ Export Session</button>
+  </div>
+  <div id="chat-messages"></div>
+  <div class="chat-input-area">
+    <div id="file-preview-area"></div>
+    <div class="chat-input-row">
+      <button class="icon-btn" title="Upload file" onclick="document.getElementById('file-input').click()">📎</button>
+      <textarea id="chat-input"
+        placeholder="Type your response, describe what you'd correct, or ask follow-up questions…"
+        rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,160)+'px'"></textarea>
+      <button id="send-btn" onclick="sendMessage()">➤</button>
+    </div>
+    <div class="input-hint">Shift+Enter for new line · Upload: Images, PDF, DOCX, CSV, XLSX, code files (.py, .js, .m, .sql, …)</div>
+  </div>
+  <input type="file" id="file-input" multiple
+    accept="image/*,.pdf,.docx,.csv,.xlsx,.xls,.py,.js,.ts,.jsx,.tsx,.java,.cpp,.c,.h,.cs,.go,.r,.m,.sql,.html,.css,.json,.yaml,.yml,.sh,.rb,.php,.swift,.kt,.rs,.md,.ipynb"
+    onchange="handleFiles(event)" />
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  CONFIGURATION
+// ════════════════════════════════════════════
+const CLAUDE_MODEL  = "claude-sonnet-4-5-20250929";
+const ANTH_URL      = "https://api.anthropic.com/v1/messages";
+const ANTH_VER      = "2023-06-01";
+
+let apiKey       = "";
+let chatHistory  = [];
+let pendingFiles = [];
+let activeDiscipline = null;
+let activeScenario   = null;
+
+// ════════════════════════════════════════════
+//  DISCIPLINES & SCENARIOS
+// ════════════════════════════════════════════
+const DISCIPLINES = {
+  accounting: {
+    id: "accounting", title: "Accounting", icon: "📊", color: "#4CAF50",
+    program: "A.S. Accounting",
+    tagline: "Verify AI financial outputs using GAAP standards and professional judgment",
+    scenarios: [
+      {
+        id: "gl-classification",
+        title: "GL Transaction Classification",
+        subtitle: "An AI drafted journal entry classifications for a client. Verify each one against GAAP, catch the errors, and justify your corrections.",
+        duration: "20–30 min",
+        skills: ["GAAP Reasoning", "Error Detection", "Professional Judgment"],
+        systemPrompt: `You are an AI accounting assistant in an HCC Accounting career development scenario.
+
+SCENARIO: GL Transaction Classification
+
+Generate a realistic set of 7 business transactions for a small professional services firm, with AI-drafted GL classifications. Present as a markdown table with columns: # | Transaction Description | Amount | AI-Suggested Account | Account Type | Dr/Cr | AI Reasoning.
+
+IMPORTANT — Embed exactly 2 errors the student must find (do NOT label them):
+1. Classify a laptop purchase ($2,400) as an Office Expense (expensed immediately) — it should be capitalized as Equipment under GAAP since it exceeds the typical $2,000 capitalization threshold.
+2. Record a customer deposit received ($5,000) as Revenue — it should be Unearned Revenue (liability) since the service hasn't been performed yet.
+
+After the table, add this instruction block:
+---
+**Your Turn — Professional Review**
+Review each classification above. For each error or questionable judgment you find:
+1. Identify what should be changed
+2. State the GAAP principle or standard that applies
+3. Explain how you'd communicate the correction to the client
+
+You can also upload supporting documents (trial balance, chart of accounts, etc.) for reference.`,
+        reflectionPrompts: [
+          "Which classifications did you change, and what specific GAAP principle justifies each correction?",
+          "Were there any transactions where the AI's treatment was defensible but you still preferred a different approach? Why?",
+          "How would you explain one of your corrections to a business owner with no accounting background?"
+        ]
+      },
+      {
+        id: "variance-analysis",
+        title: "Variance Analysis Review",
+        subtitle: "An AI generated a quarterly management summary from financial data. Validate the numbers, find what was missed, and decide what goes in the final report.",
+        duration: "25–35 min",
+        skills: ["Data Validation", "Anomaly Detection", "Management Reporting"],
+        systemPrompt: `You are an AI accounting assistant in an HCC Accounting career development scenario.
+
+SCENARIO: Quarterly Variance Analysis
+
+Generate a Q3 variance analysis report for a mid-size service company. Present a markdown table with columns: Account | Budget | Actual | Variance $ | Variance % | AI Analysis.
+
+Use these 6 line items: Revenue, Cost of Services, Payroll, Marketing, Rent & Facilities, Other Operating Expenses. Make numbers realistic and specific.
+
+IMPORTANT — Embed exactly 2 issues the student must find (do NOT label them):
+1. Flag a –8% revenue variance as a "significant anomaly requiring immediate investigation." In reality, this is a predictable Q3 seasonal pattern for service businesses — a good analyst would recognize it as normal.
+2. Show payroll at only +2.3% over budget. Do NOT flag this as concerning. However, within the data, note that headcount decreased 18% during the quarter — meaning remaining staff cost 25% more per person, suggesting overtime or retention bonuses that deserve scrutiny.
+
+After the table, add:
+---
+**Your Turn — Management Review**
+Review this variance analysis before it goes to the CFO.
+- Where is the AI being overly cautious or alarming about something normal?
+- Where has it missed a genuine financial concern?
+- What would you add, remove, or reframe before presenting to leadership?`,
+        reflectionPrompts: [
+          "Which variances represent genuine concerns versus normal fluctuations? What criteria did you use to decide?",
+          "What did the AI overstate, and what did it miss? What additional data would you pull to verify?",
+          "How would you present your findings differently to a CFO versus a department head?"
+        ]
+      }
+    ]
+  },
+
+  cybersecurity: {
+    id: "cybersecurity", title: "Cybersecurity", icon: "🛡️", color: "#F44336",
+    program: "A.S. Cybersecurity",
+    tagline: "Analyze AI threat intelligence, trace evidence, and draft professional incident reports",
+    scenarios: [
+      {
+        id: "incident-analysis",
+        title: "Network Incident Analysis",
+        subtitle: "A security AI flagged several threats from 24 hours of network logs. Trace the evidence, identify what the AI got wrong or missed, and determine what to escalate.",
+        duration: "25–35 min",
+        skills: ["Log Analysis", "Threat Verification", "Critical Evaluation"],
+        systemPrompt: `You are an AI cybersecurity assistant in an HCC Cybersecurity career development scenario.
+
+SCENARIO: Network Incident Analysis
+
+Generate an AI threat analysis report covering a 24-hour monitoring window for a mid-size healthcare organization. Present 4 security events in a markdown table: Event ID | Timestamp | Source IP | Event Type | AI Severity | AI Summary | Recommended Action.
+
+Include realistic log snippets after the table to support the events.
+
+IMPORTANT — Embed exactly 2 issues the student must find (do NOT label them):
+1. **Overstatement**: Flag outbound UDP traffic on port 123 from the server cluster as HIGH severity "potential data exfiltration." This is standard NTP (Network Time Protocol) time synchronization — normal network behavior that any trained analyst would immediately recognize.
+2. **Critical omission**: One event shows a single failed login attempt and is rated LOW severity. However, within the log snippets, include evidence of 847 failed login attempts from the same source IP over a 3-hour window against the employee portal — a textbook brute-force attack that should be HIGH severity and trigger immediate IP block and account lockout review.
+
+After the data, add:
+---
+**Your Turn — Analyst Review**
+Review this threat analysis before escalating to your security team.
+- For each event: Do you agree with the severity rating? What evidence supports or contradicts the AI's conclusion?
+- Where has the AI overstated a threat? Where has it dangerously understated one?
+- What additional logs, tools, or data would you request?`,
+        reflectionPrompts: [
+          "Which findings have strong evidence and which need more investigation before you'd escalate them?",
+          "Where did the AI overstate the threat? Where did it miss something critical? What in the data gave it away?",
+          "What tools (SIEM, firewall logs, EDR) would you use to verify the brute-force pattern and respond?"
+        ]
+      },
+      {
+        id: "incident-report",
+        title: "Incident Report Drafting",
+        subtitle: "An AI drafted a post-incident report after a phishing breach. Separate confirmed facts from inferences, fix the inaccuracies, and revise it to meet professional standards.",
+        duration: "20–30 min",
+        skills: ["Technical Writing", "Fact vs. Inference", "Stakeholder Communication"],
+        systemPrompt: `You are an AI cybersecurity assistant in an HCC Cybersecurity career development scenario.
+
+SCENARIO: Post-Incident Report Review
+
+Draft a security incident report for a phishing-based credential compromise at a 250-person healthcare company. Include these sections: Executive Summary | Timeline of Events | Affected Systems | Root Cause Analysis | Impact Assessment | Recommended Remediation.
+
+Make it detailed with realistic timestamps, system names, user counts, and technical specifics.
+
+IMPORTANT — Embed exactly 3 problems the student must find and correct (do NOT label them):
+1. **Fact presented as confirmed that is only suspected**: In Root Cause Analysis, state "The attacker accessed and exfiltrated patient records from the EHR system." The timeline only shows a successful login to the EHR system — there is no evidence yet of data access or exfiltration. This is speculation presented as fact.
+2. **Dangerous technical error**: In Recommended Remediation, include "Enforce password resets using MD5 hashing for all affected accounts." MD5 is cryptographically broken and should never be used for password hashing — this would create a new vulnerability.
+3. **Unsupported claim in Executive Summary**: State "No financial data was compromised." However, the Timeline shows that the compromised credentials had access to the billing system and a 12-minute session was recorded — this claim is unverified and should not be stated as fact.
+
+After the report, add:
+---
+**Your Turn — Report Review**
+Review this incident report before it goes to the CISO and potentially to HIPAA compliance officers.
+- Where has the AI presented inferences or assumptions as confirmed facts?
+- What is technically incorrect in the remediation section, and why is it dangerous?
+- What unsupported claims could create legal or compliance liability if left in the report?`,
+        reflectionPrompts: [
+          "Which statements are confirmed facts versus AI inferences? How would you clearly distinguish them in the final report?",
+          "What was technically wrong in the remediation recommendation, and what would you replace it with?",
+          "How would you rewrite the Executive Summary for a hospital board who will make decisions based on it?"
+        ]
+      }
+    ]
+  },
+
+  business: {
+    id: "business", title: "Business & Entrepreneurship", icon: "💼", color: "#FF9800",
+    program: "A.S. Business & Entrepreneurship",
+    tagline: "Interrogate AI business plans, evaluate assumptions, and build investor-ready artifacts",
+    scenarios: [
+      {
+        id: "business-plan",
+        title: "Business Plan Review",
+        subtitle: "An AI drafted a business plan with optimistic projections and missed assumptions. Find the flaws, add real-world constraints, and revise it to be credible and fundable.",
+        duration: "30–40 min",
+        skills: ["Financial Analysis", "Market Reasoning", "Critical Thinking"],
+        systemPrompt: `You are an AI business assistant in an HCC Business & Entrepreneurship career development scenario.
+
+SCENARIO: Business Plan Review
+
+Draft a complete business plan for a mobile car detailing service in Tampa Bay. Include: Executive Summary | Market Analysis | Financial Projections (Year 1–3 table) | Marketing Strategy | Operations Plan.
+
+Make it detailed and confident — specific numbers, market size data, competitive analysis.
+
+IMPORTANT — Embed exactly 3 flawed assumptions the student must identify and correct (do NOT label them):
+1. **Impossible operations model**: Project Year 1 revenue of $192,000 based on "8 clients/day × $60 average × 5 days × 50 weeks." This ignores that each full detail takes 2–3 hours plus 20–30 min travel between clients — physically impossible for a solo operator to complete 8 per day.
+2. **Severely underestimated startup costs**: List total startup costs at $4,200 (pressure washer, supplies, marketing materials). Omit: a commercial-grade dual-bucket system and extractors ($2,800+), commercial auto insurance for a mobile business ($2,400/yr), business licensing and bonding ($400), and a website/booking system ($600+).
+3. **False market gap claim**: Describe the Tampa Bay mobile detailing market as "largely untapped with few competitors." Tampa Bay has over 180 registered mobile detailing businesses and two national franchise operations (Ziebart, DetailXPerts) actively expanding in the region.
+
+After the plan, add:
+---
+**Your Turn — Investor Readiness Review**
+Review this business plan as if you were preparing it for a small business loan officer or angel investor.
+- What assumptions would an investor immediately challenge?
+- What real-world constraints has the AI ignored?
+- What would you research and revise to make this plan credible?`,
+        reflectionPrompts: [
+          "Which financial projections are unrealistic and why? What data or research would you use to build accurate numbers?",
+          "What competitive, operational, or cost factors did the AI underestimate or ignore completely?",
+          "How would your pitch to a bank loan officer differ from your pitch to an angel investor for this business?"
+        ]
+      },
+      {
+        id: "customer-persona",
+        title: "Customer Persona & Marketing Analysis",
+        subtitle: "An AI created customer personas and ad copy for a product launch. Identify where it stereotyped, oversimplified, or missed the target — then revise for real impact.",
+        duration: "20–30 min",
+        skills: ["Market Segmentation", "Consumer Behavior", "Brand Strategy"],
+        systemPrompt: `You are an AI marketing assistant in an HCC Business & Entrepreneurship career development scenario.
+
+SCENARIO: Customer Persona & Ad Copy Review
+
+Create 3 detailed customer personas for a new on-demand tutoring app targeting HCC students. For each persona include: Name | Age | Major | Goals | Pain Points | Preferred Communication Channels | Tech Comfort Level | Sample Quote. Then write 3 sentences of ad copy tailored to each persona.
+
+IMPORTANT — Embed exactly 3 problems the student must identify (do NOT label them):
+1. **Useless generic persona**: Create one persona so broadly described ("Maria, 20, wants to succeed in college, struggles with time management, uses her phone a lot") that she matches virtually every college student. No brand decision could be made from this persona — it lacks specific behavioral triggers or differentiated needs.
+2. **Demographic stereotype**: Create a nursing student persona and describe them as "not very comfortable with technology, prefers face-to-face interactions, unlikely to use apps." This is a stereotype applied to a career track, not derived from actual behavioral data — nursing students today are often highly tech-proficient due to clinical documentation systems.
+3. **Tone mismatch in ad copy**: For the 19-year-old gamer/CS student persona, write ad copy in formal corporate language: "Optimize your academic trajectory with our comprehensive, expert-curated learning solutions designed to maximize your scholastic performance." This tone would be immediately ignored by the target audience.
+
+After the personas, add:
+---
+**Your Turn — Marketing Review**
+Review these personas and ad copy as if you're preparing them for a campaign launch.
+- Which persona gives you actionable targeting information and which is too vague to be useful?
+- Where has the AI made assumptions based on demographics rather than behavior?
+- Revise the weakest persona and one piece of ad copy. What data would you collect to validate your revisions?`,
+        reflectionPrompts: [
+          "Which persona gave you the most useful targeting information? What specific details made it actionable?",
+          "Where did the AI apply demographic stereotypes instead of behavioral insights? Why does that distinction matter for marketing?",
+          "How would you conduct research (surveys, interviews, analytics) to validate or improve a persona?"
+        ]
+      }
+    ]
+  },
+
+  construction: {
+    id: "construction", title: "Construction Management", icon: "🏗️", color: "#2196F3",
+    program: "A.S. Architecture & Construction Management",
+    tagline: "Verify AI site reports, apply OSHA standards, and validate project health",
+    scenarios: [
+      {
+        id: "site-survey",
+        title: "Site Survey Analysis",
+        subtitle: "An AI generated a preliminary site survey from imagery and data. Compare findings to the site plan, identify the safety violations and errors, and document corrections.",
+        duration: "25–35 min",
+        skills: ["Site Assessment", "OSHA Standards", "Technical Documentation"],
+        systemPrompt: `You are an AI construction management assistant in an HCC Construction Management career development scenario.
+
+SCENARIO: Preliminary Site Survey Analysis
+
+Generate an AI-produced site survey report for a 2-acre commercial construction site in Tampa, FL (medical office building, 12,500 sq ft). Include: Site Overview | Boundary Dimensions | Staging Area Recommendations | Utility Conflicts Identified | Hazard Assessment | Proposed Access Routes.
+
+Include specific measurements, coordinates, and detailed findings.
+
+IMPORTANT — Embed exactly 3 errors the student must find and correct (do NOT label them):
+1. **Utility conflict location error**: State that "a 6-inch water main runs along the eastern property line and poses no conflict with proposed construction." Based on the site description, the water main actually crosses diagonally through the northwest quadrant — directly beneath the proposed concrete pour staging area. The AI has the utility in the wrong location entirely.
+2. **OSHA violation in staging recommendation**: Recommend placing the primary material staging area 8 feet from the active roadway. OSHA 29 CFR 1926.502 requires adequate distance and protective barriers from traffic for construction staging — 8 feet with no barrier is non-compliant and creates a struck-by hazard.
+3. **Boundary measurement error**: Describe the north boundary as 165 linear feet. The site description clearly states the north boundary is 210 feet. This 45-foot discrepancy would cause every layout, setback calculation, and easement determination on the north side to be incorrect.
+
+After the survey, add:
+---
+**Your Turn — Field Manager Review**
+Review this site survey before any site preparation work begins.
+- What errors did the AI make, and what are the consequences if they're not caught?
+- Which issues are safety-critical and what OSHA standard applies?
+- What corrections and additional investigations would you require before signing off?`,
+        reflectionPrompts: [
+          "Which errors are safety-critical versus procedural? What would happen if each one wasn't caught before work began?",
+          "What OSHA standard applies to the staging area issue, and how would you bring the recommendation into compliance?",
+          "What additional investigations (utility locates, survey stakes, soil borings) would you require before finalizing this survey?"
+        ]
+      },
+      {
+        id: "progress-report",
+        title: "Progress Report Verification",
+        subtitle: "An AI generated a weekly construction progress report. Find the schedule inconsistencies, hidden cost risks, and missing milestones before it goes to the project owner.",
+        duration: "20–30 min",
+        skills: ["Schedule Analysis", "Cost Control", "Owner Communication"],
+        systemPrompt: `You are an AI construction management assistant in an HCC Construction Management career development scenario.
+
+SCENARIO: Weekly Progress Report Verification
+
+Generate a Week 14 progress report for a 9-month commercial medical office building project. Include: Overall % Complete | Work Package Status Table (Phase | Scheduled % | Reported % | Labor Hours Budget | Actual Hours | Cost Code) | Key Material Deliveries | Upcoming Milestones | Issues Log | Cash Flow Summary.
+
+Make it detailed with specific subcontractor names, cost codes, and dollar figures.
+
+IMPORTANT — Embed exactly 3 discrepancies the student must find (do NOT label them):
+1. **Internal inconsistency**: Report structural steel as "94% complete — ahead of schedule." However, in the Upcoming Milestones section, include "Structural Steel Final Inspection — scheduled Week 16." You cannot be 94% complete on structural steel if it hasn't passed final inspection — the milestone and the progress claim are contradictory.
+2. **Buried cost alarm**: Show MEP rough-in labor costs as only +3.1% over budget in the summary table — which looks acceptable. However, within the detailed labor hours rows, MEP actual hours are 41% over budget. The cost overrun is understated because the AI used a blended rate rather than the MEP subcontractor's actual rate.
+3. **Silently dropped milestone**: The project schedule required completion of exterior waterproofing membrane by Week 12. In Week 14, this work package appears nowhere in the report — not in completed work, not in active work, not in the issues log. It has simply vanished, and the project cannot receive its occupancy permit without it.
+
+After the report, add:
+---
+**Your Turn — PM Review Before Owner Meeting**
+You have an owner meeting tomorrow and need this report to be accurate.
+- What discrepancies did you find between different sections of the report?
+- What financial or schedule risks are understated or missing entirely?
+- How would you communicate the issues you found to the project owner professionally?`,
+        reflectionPrompts: [
+          "Where are the internal contradictions in this report? How would you verify the true status of each flagged item?",
+          "What financial risks are understated or hidden in the formatting? What's the real cost exposure on MEP?",
+          "How would you structure the conversation with the project owner about the missing waterproofing milestone?"
+        ]
+      }
+    ]
+  }
+};
+
+// ════════════════════════════════════════════
+//  FILE PROCESSING
+// ════════════════════════════════════════════
+const CODE_EXT = new Set([".py",".js",".ts",".jsx",".tsx",".java",".cpp",".c",
+  ".h",".cs",".go",".r",".m",".sql",".html",".css",".json",".yaml",
+  ".yml",".sh",".bash",".rb",".php",".swift",".kt",".rs",".md",".ipynb"]);
+
+const LANG_MAP = {
+  ".py":"python",".js":"javascript",".ts":"typescript",".jsx":"jsx",".tsx":"tsx",
+  ".java":"java",".cpp":"cpp",".c":"c",".h":"c",".cs":"csharp",".go":"go",
+  ".r":"r",".m":"matlab",".sql":"sql",".html":"html",".css":"css",
+  ".json":"json",".yaml":"yaml",".yml":"yaml",".sh":"bash",".bash":"bash",
+  ".rb":"ruby",".php":"php",".swift":"swift",".kt":"kotlin",".rs":"rust",
+  ".md":"markdown",".ipynb":"json"
+};
+
+async function processFile(file) {
+  const name = file.name;
+  const ext  = "." + name.split(".").pop().toLowerCase();
+
+  if (file.type.startsWith("image/")) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = e => res({ kind:"image", name, mimeType:file.type, base64: e.target.result.split(",")[1] });
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+  }
+  if (ext === ".pdf") {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let text = `[PDF: ${name}]\n\n`;
+    for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+      const pg = await pdf.getPage(i);
+      const ct = await pg.getTextContent();
+      text += ct.items.map(s => s.str).join(" ") + "\n\n";
+    }
+    return { kind:"text", name, content: text };
+  }
+  if (ext === ".docx") {
+    const buf = await file.arrayBuffer();
+    const res = await mammoth.extractRawText({ arrayBuffer: buf });
+    return { kind:"text", name, content: `[Word Document: ${name}]\n\n${res.value}` };
+  }
+  if (ext === ".csv") {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = e => res({ kind:"text", name, content: `[CSV: ${name}]\n\n${e.target.result}` });
+      r.onerror = rej;
+      r.readAsText(file);
+    });
+  }
+  if ([".xlsx",".xls"].includes(ext)) {
+    const buf = await file.arrayBuffer();
+    const wb  = XLSX.read(buf, { type:"array" });
+    let text  = `[Spreadsheet: ${name}]\n\n`;
+    wb.SheetNames.forEach(s => { text += `Sheet: ${s}\n${XLSX.utils.sheet_to_csv(wb.Sheets[s])}\n\n`; });
+    return { kind:"text", name, content: text };
+  }
+  if (CODE_EXT.has(ext)) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = e => res({ kind:"text", name, content: `[Code: ${name}]\n\`\`\`${LANG_MAP[ext]||"text"}\n${e.target.result}\n\`\`\`` });
+      r.onerror = rej;
+      r.readAsText(file);
+    });
+  }
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res({ kind:"text", name, content: `[File: ${name}]\n\n${e.target.result}` });
+    r.onerror = rej;
+    r.readAsText(file);
+  });
+}
+
+async function handleFiles(e) {
+  for (const file of Array.from(e.target.files)) {
+    try { pendingFiles.push(await processFile(file)); } catch(err) { console.error(err); }
+  }
+  renderFilePreviews();
+  e.target.value = "";
+}
+
+function renderFilePreviews() {
+  const area = document.getElementById("file-preview-area");
+  area.innerHTML = "";
+  pendingFiles.forEach((f, i) => {
+    const chip = document.createElement("div");
+    chip.className = "file-chip";
+    chip.innerHTML = `${f.kind==="image"?"🖼":"📄"} ${f.name} <button onclick="removeFile(${i})">×</button>`;
+    area.appendChild(chip);
+  });
+}
+
+function removeFile(i) { pendingFiles.splice(i, 1); renderFilePreviews(); }
+
+// ════════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function startApp() {
+  const key = document.getElementById("api-key-input").value.trim();
+  if (!key.startsWith("sk-ant-")) { alert("Please enter a valid Anthropic API key (starts with sk-ant-)."); return; }
+  apiKey = key;
+  document.getElementById("btn-back").style.display = "block";
+  document.getElementById("breadcrumb").style.display = "flex";
+  document.getElementById("bc-disc").textContent = "Select Field";
+  renderDashboard();
+  showScreen("screen-dashboard");
+}
+
+function goBack() {
+  if (activeScenario) {
+    activeScenario = null;
+    document.getElementById("bc-sep").style.display = "none";
+    document.getElementById("bc-scen").textContent = "";
+    document.getElementById("bc-disc").textContent = activeDiscipline.title;
+    showScreen("screen-scenarios");
+  } else if (activeDiscipline) {
+    activeDiscipline = null;
+    document.getElementById("bc-disc").textContent = "Select Field";
+    showScreen("screen-dashboard");
+  } else {
+    document.getElementById("btn-back").style.display = "none";
+    document.getElementById("breadcrumb").style.display = "none";
+    showScreen("screen-setup");
+  }
+}
+
+// ════════════════════════════════════════════
+//  RENDER DASHBOARD
+// ════════════════════════════════════════════
+function renderDashboard() {
+  const grid = document.getElementById("disciplines-grid");
+  grid.innerHTML = "";
+  Object.values(DISCIPLINES).forEach(d => {
+    const card = document.createElement("div");
+    card.className = "discipline-card";
+    card.style.cssText = `--disc-color:${d.color}`;
+    card.innerHTML = `
+      <div class="disc-icon">${d.icon}</div>
+      <div class="disc-title">${d.title}</div>
+      <div class="disc-program">${d.program}</div>
+      <div class="disc-tagline">${d.tagline}</div>
+      <div class="disc-badge">${d.scenarios.length} Scenarios →</div>`;
+    card.onclick = () => openDiscipline(d);
+    grid.appendChild(card);
+  });
+}
+
+// ════════════════════════════════════════════
+//  RENDER SCENARIOS
+// ════════════════════════════════════════════
+function openDiscipline(disc) {
+  activeDiscipline = disc;
+  document.getElementById("bc-disc").textContent = disc.title;
+  document.getElementById("bc-sep").style.display = "none";
+  document.getElementById("bc-scen").textContent = "";
+
+  document.getElementById("scenario-header").innerHTML = `
+    <h2 style="color:${disc.color}">${disc.icon} ${disc.title}</h2>
+    <p>${disc.program} · ${disc.scenarios.length} career development scenarios</p>`;
+
+  const grid = document.getElementById("scenarios-grid");
+  grid.innerHTML = "";
+  disc.scenarios.forEach(sc => {
+    const card = document.createElement("div");
+    card.className = "scenario-card";
+    card.style.cssText = `--disc-color:${disc.color}`;
+    card.innerHTML = `
+      <div class="sc-title">${sc.title}</div>
+      <div class="sc-subtitle">${sc.subtitle}</div>
+      <div class="sc-tags">${sc.skills.map(s=>`<span class="sc-tag">⚡ ${s}</span>`).join("")}</div>
+      <div class="sc-duration">Est. time: <strong>${sc.duration}</strong></div>
+      <button class="btn-launch" style="background:${disc.color}">Launch Scenario →</button>`;
+    card.querySelector(".btn-launch").onclick = e => { e.stopPropagation(); launchScenario(disc, sc); };
+    card.onclick = () => launchScenario(disc, sc);
+    grid.appendChild(card);
+  });
+
+  showScreen("screen-scenarios");
+}
+
+// ════════════════════════════════════════════
+//  LAUNCH SCENARIO
+// ════════════════════════════════════════════
+async function launchScenario(disc, sc) {
+  activeDiscipline = disc;
+  activeScenario   = sc;
+  chatHistory      = [];
+  pendingFiles     = [];
+
+  document.getElementById("bc-disc").textContent   = disc.title;
+  document.getElementById("bc-sep").style.display  = "inline";
+  document.getElementById("bc-scen").textContent   = sc.title;
+  document.getElementById("chat-sc-name").textContent = sc.title;
+  document.getElementById("chat-sc-prog").textContent = disc.program;
+  document.getElementById("chat-skills").innerHTML = sc.skills.map(s=>`<span class="skill-chip">⚡ ${s}</span>`).join("");
+  document.getElementById("chat-messages").innerHTML = "";
+  document.getElementById("file-preview-area").innerHTML = "";
+  document.getElementById("chat-input").value = "";
+
+  showScreen("screen-chat");
+  addSysNote(`Scenario: ${sc.title} · ${disc.program}`);
+  await callClaudeForLaunch(sc.systemPrompt);
+}
+
+// ════════════════════════════════════════════
+//  CLAUDE API
+// ════════════════════════════════════════════
+async function callClaudeForLaunch(systemPrompt) {
+  const typing = addTyping();
+  document.getElementById("send-btn").disabled = true;
+  try {
+    const res  = await fetchClaude(systemPrompt, [{ role:"user", content:"Please begin the scenario." }]);
+    const data = await res.json();
+    typing.remove();
+    if (data.error) { addSysNote("Error: " + data.error.message); return; }
+    const reply = data.content[0].text;
+    chatHistory.push({ role:"user",      content:"Please begin the scenario." });
+    chatHistory.push({ role:"assistant", content: reply });
+    addAIMessage(reply);
+  } catch(e) {
+    typing.remove();
+    addSysNote("Connection error: " + e.message);
+  } finally {
+    document.getElementById("send-btn").disabled = false;
+  }
+}
+
+async function sendMessage() {
+  const input = document.getElementById("chat-input");
+  const text  = input.value.trim();
+  if (!text && pendingFiles.length === 0) return;
+
+  const parts = [];
+  pendingFiles.forEach(f => {
+    if (f.kind === "image") parts.push({ type:"image", source:{ type:"base64", media_type:f.mimeType, data:f.base64 } });
+    else parts.push({ type:"text", text:f.content });
+  });
+  if (text) parts.push({ type:"text", text });
+
+  const content = parts.length === 1 && parts[0].type === "text" ? parts[0].text : parts;
+  addUserMessage(text, pendingFiles.map(f=>f.name));
+  pendingFiles = [];
+  renderFilePreviews();
+  input.value = "";
+  input.style.height = "auto";
+
+  chatHistory.push({ role:"user", content });
+
+  const typing = addTyping();
+  document.getElementById("send-btn").disabled = true;
+  try {
+    const res  = await fetchClaude(activeScenario.systemPrompt, chatHistory);
+    const data = await res.json();
+    typing.remove();
+    if (data.error) { addSysNote("Error: " + data.error.message); chatHistory.pop(); return; }
+    const reply = data.content[0].text;
+    chatHistory.push({ role:"assistant", content: reply });
+    addAIMessage(reply);
+    if (chatHistory.length > 4) addReflection(activeScenario.reflectionPrompts);
+  } catch(e) {
+    typing.remove();
+    addSysNote("Connection error: " + e.message);
+    chatHistory.pop();
+  } finally {
+    document.getElementById("send-btn").disabled = false;
+  }
+}
+
+function fetchClaude(systemPrompt, messages) {
+  return fetch(ANTH_URL, {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": ANTH_VER,
+      "anthropic-dangerous-direct-browser-access": "true",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4096, system: systemPrompt, messages })
+  });
+}
+
+// ════════════════════════════════════════════
+//  DOM HELPERS
+// ════════════════════════════════════════════
+function addUserMessage(text, fileNames) {
+  const wrap = document.createElement("div");
+  wrap.className = "msg-wrap";
+  if (fileNames.length > 0) {
+    const lbl = document.createElement("div");
+    lbl.className = "msg-label right";
+    lbl.textContent = "📎 " + fileNames.join(", ");
+    wrap.appendChild(lbl);
+  }
+  const msg = document.createElement("div");
+  msg.className = "msg user";
+  msg.textContent = text || "(file uploaded)";
+  wrap.appendChild(msg);
+  msgs().appendChild(wrap);
+  scrollDown();
+}
+
+function addAIMessage(text) {
+  const wrap = document.createElement("div");
+  wrap.className = "msg-wrap";
+  const lbl = document.createElement("div");
+  lbl.className = "msg-label";
+  lbl.textContent = "🤖 AI Assistant";
+  const msg = document.createElement("div");
+  msg.className = "msg ai";
+  msg.innerHTML = marked.parse(text);
+  msg.querySelectorAll("pre code").forEach(el => hljs.highlightElement(el));
+  wrap.appendChild(lbl);
+  wrap.appendChild(msg);
+  msgs().appendChild(wrap);
+  scrollDown();
+}
+
+function addSysNote(text) {
+  const el = document.createElement("div");
+  el.className = "msg sys-note";
+  el.textContent = text;
+  msgs().appendChild(el);
+  scrollDown();
+}
+
+function addTyping() {
+  const el = document.createElement("div");
+  el.className = "typing";
+  el.innerHTML = "<span></span><span></span><span></span>";
+  msgs().appendChild(el);
+  scrollDown();
+  return el;
+}
+
+function addReflection(prompts) {
+  const box = document.createElement("div");
+  box.className = "reflection-box";
+  box.innerHTML = `
+    <div class="reflection-toggle" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.arr').textContent=this.nextElementSibling.classList.contains('open')?'▲':'▼'">
+      💡 <strong>Elevate Skills — Reflection Prompts</strong>&nbsp;<span class="arr">▼</span>
+    </div>
+    <div class="reflection-content">
+      <p>Use these to practice professional judgment after reviewing the AI's output:</p>
+      <ol>${prompts.map(p=>`<li>${p}</li>`).join("")}</ol>
+    </div>`;
+  msgs().appendChild(box);
+  scrollDown();
+}
+
+function msgs() { return document.getElementById("chat-messages"); }
+function scrollDown() { const c = msgs(); c.scrollTop = c.scrollHeight; }
+
+// ════════════════════════════════════════════
+//  EXPORT SESSION
+// ════════════════════════════════════════════
+function exportSession() {
+  if (!activeScenario) return;
+  const sep = "─".repeat(60);
+  const lines = [
+    "TPZ AI Field Guide — AI in My Field Session Export",
+    `Scenario:    ${activeScenario.title}`,
+    `Discipline:  ${activeDiscipline.title}`,
+    `Program:     ${activeDiscipline.program}`,
+    `Exported:    ${new Date().toLocaleString()}`,
+    sep, ""
+  ];
+  chatHistory.forEach(m => {
+    const who  = m.role === "user" ? "STUDENT" : "AI ASSISTANT";
+    const body = typeof m.content === "string" ? m.content : "[multipart content with file(s)]";
+    lines.push(`[${who}]`, body, "");
+  });
+  lines.push(sep, "REFLECTION PROMPTS", "");
+  activeScenario.reflectionPrompts.forEach((p, i) => lines.push(`${i+1}. ${p}`));
+
+  const blob = new Blob([lines.join("\n")], { type:"text/plain" });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement("a"), { href:url, download:`AI-Field-Guide_${activeScenario.id}_${Date.now()}.txt` });
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+marked.setOptions({ breaks:true, gfm:true });
+</script>
+</body>
+</html>
