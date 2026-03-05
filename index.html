@@ -560,14 +560,14 @@
     <div id="left-panel">
       <div class="panel-header">
         <div>
-          <div class="panel-title">🎙️ Ask Elenora</div>
+          <div class="panel-title">🎙️ Ask Wayne</div>
           <div class="panel-subtitle">Voice AI Tutor · HeyGen + ElevenLabs</div>
         </div>
       </div>
 
       <div class="avatar-wrap">
         <div id="avatar-container"></div>
-        <p id="status">Click Start to connect with Elenora.</p>
+        <p id="status">Click Start to connect with Wayne.</p>
         <div class="controls">
           <button id="startBtn">▶ Start Session</button>
           <button id="stopBtn">⏹ End Session</button>
@@ -663,7 +663,7 @@
     const ANTHROPIC_VERSION  = "2023-06-01";
 
     // System prompt for the Claude Study Assistant
-    const SYSTEM_PROMPT = `You are Elenora's digital study companion for TechPlayzone (TPZ), an AI-powered STEM learning platform. Your role is to help students:
+    const SYSTEM_PROMPT = `You are Wayne's digital study companion for TechPlayzone (TPZ), an AI-powered STEM learning platform. Your role is to help students:
 
 - Analyze uploaded files: images, documents, audio transcripts, spreadsheets, and data files
 - Explain STEM concepts clearly with examples, analogies, and step-by-step reasoning
@@ -1232,7 +1232,7 @@ Guidelines:
       transcriptEl.style.display = "block";
       const div = document.createElement("div");
       div.className = role === "user" ? "msg-user" : role === "agent" ? "msg-agent" : "msg-system";
-      div.textContent = (role === "user" ? "You: " : role === "agent" ? "Elenora: " : "") + text;
+      div.textContent = (role === "user" ? "You: " : role === "agent" ? "Wayne: " : "") + text;
       transcriptEl.appendChild(div);
       transcriptEl.scrollTop = transcriptEl.scrollHeight;
     }
@@ -1378,7 +1378,7 @@ Guidelines:
               const fmt  = meta.agent_output_audio_format || "pcm_16000";
               const rate = parseInt(fmt.replace("pcm_", ""));
               if (!isNaN(rate)) elOutputRate = rate;
-              statusEl.textContent = "Connected! Speak to Elenora.";
+              statusEl.textContent = "Connected! Speak to Wayne.";
               addTranscript("system", "Session started. You can speak now.");
               hgSend({ type: "agent.start_listening" });
               break;
@@ -1395,7 +1395,7 @@ Guidelines:
                   isSpeaking = true;
                   muteMic();
                   hgSend({ type: "agent.stop_listening" });
-                  statusEl.textContent = "Elenora is speaking…";
+                  statusEl.textContent = "Wayne is speaking…";
                 }
                 bridgeAudio(audioB64);
               }
@@ -1415,7 +1415,7 @@ Guidelines:
               const t = msg.agent_response_correction_event?.corrected_agent_response;
               if (t) {
                 const msgs = transcriptEl.querySelectorAll(".msg-agent");
-                if (msgs.length > 0) msgs[msgs.length - 1].textContent = "Elenora: " + t;
+                if (msgs.length > 0) msgs[msgs.length - 1].textContent = "Wayne: " + t;
               }
               break;
             }
