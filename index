@@ -1,0 +1,2512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI in My Field — Professional Work Simulation Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --accent: #00c8ff;
+    --accent2: #ff6b35;
+    --success: #00e5a0;
+    --warn: #ffd166;
+    --error: #ff4c6b;
+    --text: #e8edf5;
+    --text2: #7a8ba8;
+    --text3: #4a5a72;
+    --glow: rgba(0,200,255,0.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRID BACKGROUND */
+  body::before {
+    content:'';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,200,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,200,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* SCREENS */
+  .screen { display: none; position: relative; z-index: 1; }
+  .screen.active { display: block; }
+
+  /* ─── LANDING ─── */
+  #screen-landing {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  .landing-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(0,200,255,0.3);
+    padding: 6px 16px;
+    border-radius: 20px;
+    margin-bottom: 32px;
+    background: rgba(0,200,255,0.05);
+    animation: fadeUp 0.6s ease both;
+  }
+  .landing-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(42px, 8vw, 86px);
+    font-weight: 800;
+    line-height: 1.0;
+    text-align: center;
+    margin-bottom: 16px;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+  .landing-title .highlight {
+    background: linear-gradient(135deg, var(--accent), #7b6fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .landing-sub {
+    font-size: 17px;
+    color: var(--text2);
+    text-align: center;
+    max-width: 540px;
+    line-height: 1.7;
+    margin-bottom: 56px;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+  .disciplines-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    width: 100%;
+    max-width: 720px;
+    margin-bottom: 48px;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+  @media (max-width: 500px) { .disciplines-grid { grid-template-columns: 1fr; } }
+  .disc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .disc-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--card-glow, rgba(0,200,255,0.05));
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .disc-card:hover { border-color: var(--card-color, var(--accent)); transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+  .disc-card:hover::before { opacity: 1; }
+  .disc-icon { font-size: 32px; margin-bottom: 12px; }
+  .disc-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .disc-desc { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .disc-tag {
+    display: inline-block;
+    margin-top: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.05);
+    color: var(--text3);
+  }
+
+  /* ─── SCENARIO SELECT ─── */
+  #screen-scenarios {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px 24px;
+  }
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--text2);
+    cursor: pointer;
+    margin-bottom: 40px;
+    transition: color 0.2s;
+    background: none;
+    border: none;
+    text-transform: uppercase;
+  }
+  .back-btn:hover { color: var(--accent); }
+  .section-header { margin-bottom: 32px; }
+  .section-header .eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .section-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 34px;
+    font-weight: 800;
+  }
+  .scenario-list { display: flex; flex-direction: column; gap: 14px; }
+  .scenario-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 28px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .scenario-item:hover { border-color: var(--accent); background: var(--surface2); transform: translateX(4px); }
+  .scenario-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    min-width: 28px;
+  }
+  .scenario-info { flex: 1; }
+  .scenario-info h3 { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .scenario-info p { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .scenario-meta { display: flex; gap: 10px; margin-top: 8px; }
+  .meta-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+  }
+  .meta-difficulty { background: rgba(255,107,53,0.1); color: var(--accent2); border: 1px solid rgba(255,107,53,0.2); }
+  .meta-errors { background: rgba(255,77,107,0.1); color: var(--error); border: 1px solid rgba(255,77,107,0.2); }
+  .scenario-arrow { color: var(--text3); font-size: 20px; }
+
+  /* ─── SIMULATION ─── */
+  #screen-sim {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+  .sim-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .sim-title-block .eyebrow { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; margin-bottom: 6px; }
+  .sim-title-block h2 { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; }
+  .sim-progress { display: flex; align-items: center; gap: 12px; }
+  .progress-step { width: 32px; height: 4px; border-radius: 2px; background: var(--border); transition: background 0.3s; }
+  .progress-step.done { background: var(--success); }
+  .progress-step.active { background: var(--accent); }
+
+  .sim-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 768px) { .sim-layout { grid-template-columns: 1fr; } }
+
+  .sim-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .panel-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text2);
+  }
+  .panel-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 10px;
+  }
+  .badge-ai { background: rgba(123,111,255,0.15); color: #7b6fff; border: 1px solid rgba(123,111,255,0.3); }
+  .badge-warn { background: rgba(255,209,102,0.1); color: var(--warn); border: 1px solid rgba(255,209,102,0.3); }
+  .panel-body { padding: 20px; }
+
+  .ai-output {
+    font-size: 13.5px;
+    line-height: 1.75;
+    color: var(--text);
+    white-space: pre-wrap;
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+  }
+  .ai-output .error-highlight {
+    background: rgba(255,77,107,0.12);
+    border-bottom: 2px solid var(--error);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.2s;
+    padding: 0 2px;
+  }
+  .ai-output .error-highlight:hover { background: rgba(255,77,107,0.25); }
+  .ai-output .error-highlight.found { background: rgba(255,77,107,0.3); }
+
+  .scenario-context {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.7;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: rgba(0,200,255,0.04);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+  }
+
+  /* Student response area */
+  .response-area {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 14px 16px;
+    resize: vertical;
+    min-height: 140px;
+    line-height: 1.6;
+    transition: border-color 0.2s;
+    margin-bottom: 14px;
+  }
+  .response-area:focus { outline: none; border-color: var(--accent); }
+  .response-area::placeholder { color: var(--text3); }
+
+  .error-checklist { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .error-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 13px;
+  }
+  .error-item:hover { border-color: rgba(255,209,102,0.4); }
+  .error-item.checked { border-color: var(--success); background: rgba(0,229,160,0.05); }
+  .error-item.checked .error-cb { background: var(--success); border-color: var(--success); color: #000; }
+  .error-cb {
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    transition: all 0.2s;
+  }
+  .error-item-text { flex: 1; line-height: 1.5; color: var(--text2); }
+  .error-item.checked .error-item-text { color: var(--text); }
+
+  /* Chat area */
+  .chat-box {
+    height: 240px;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+    background: var(--bg);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .chat-msg {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    animation: fadeUp 0.2s ease;
+  }
+  .chat-msg.user { align-self: flex-end; background: var(--accent); color: #001a28; border-radius: 12px 12px 2px 12px; font-weight: 500; }
+  .chat-msg.ai { align-self: flex-start; background: var(--surface2); color: var(--text); border-radius: 12px 12px 12px 2px; border: 1px solid var(--border); }
+  .chat-msg.ai.thinking { color: var(--text3); font-style: italic; }
+  .chat-input-row { display: flex; gap: 10px; }
+  .chat-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 10px 14px;
+    transition: border-color 0.2s;
+  }
+  .chat-input:focus { outline: none; border-color: var(--accent); }
+  .chat-input::placeholder { color: var(--text3); }
+
+  /* BUTTONS */
+  .btn {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: #001a28; }
+  .btn-primary:hover:not(:disabled) { background: #33d4ff; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(0,200,255,0.3); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: rgba(255,77,107,0.1); color: var(--error); border: 1px solid rgba(255,77,107,0.3); }
+  .btn-danger:hover:not(:disabled) { background: rgba(255,77,107,0.2); }
+  .btn-sm { padding: 8px 16px; font-size: 12px; border-radius: 8px; }
+  .btn-icon { padding: 10px 14px; }
+
+  .submit-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+
+  /* ─── RESULTS ─── */
+  #screen-results {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 60px 24px;
+  }
+  .result-header { text-align: center; margin-bottom: 48px; }
+  .score-ring {
+    width: 140px;
+    height: 140px;
+    margin: 0 auto 24px;
+    position: relative;
+  }
+  .score-ring svg { transform: rotate(-90deg); }
+  .score-ring .ring-bg { fill: none; stroke: var(--border); stroke-width: 8; }
+  .score-ring .ring-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+  .score-ring .score-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+  }
+  .score-ring .score-num { font-size: 36px; line-height: 1; }
+  .score-ring .score-label { font-size: 11px; color: var(--text2); letter-spacing: 1px; margin-top: 2px; }
+  .result-title { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+  .result-sub { color: var(--text2); font-size: 15px; }
+
+  .rubric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 32px; }
+  @media (max-width: 500px) { .rubric-grid { grid-template-columns: 1fr; } }
+  .rubric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+  .rubric-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+  .rubric-score { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; }
+  .rubric-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+  .rubric-bar-fill { height: 100%; border-radius: 2px; transition: width 1.2s ease; }
+
+  .feedback-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+  .feedback-block h3 { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+  .feedback-block p { font-size: 14px; color: var(--text2); line-height: 1.75; }
+
+  .errors-found { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+  .error-result {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+  .error-result.correct { background: rgba(0,229,160,0.06); border: 1px solid rgba(0,229,160,0.2); }
+  .error-result.missed { background: rgba(255,77,107,0.06); border: 1px solid rgba(255,77,107,0.2); }
+  .error-result .er-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .error-result .er-text { flex: 1; line-height: 1.5; }
+  .error-result .er-text strong { display: block; margin-bottom: 2px; }
+
+  .result-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 40px; }
+
+  /* LOADING */
+  .loader {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .loader span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1s ease infinite;
+  }
+  .loader span:nth-child(2) { animation-delay: 0.15s; }
+  .loader span:nth-child(3) { animation-delay: 0.3s; }
+
+  @keyframes pulse { 0%,80%,100%{opacity:0.2;transform:scale(0.8)} 40%{opacity:1;transform:scale(1)} }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+  /* Tooltip */
+  .tooltip-popup {
+    position: fixed;
+    background: var(--surface2);
+    border: 1px solid var(--error);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    max-width: 260px;
+    z-index: 100;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    pointer-events: none;
+    animation: fadeUp 0.15s ease;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .tooltip-popup strong { color: var(--error); display: block; margin-bottom: 4px; font-family: 'Syne', sans-serif; }
+
+  /* Notification */
+  .notif {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: 13px;
+    z-index: 200;
+    max-width: 320px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    animation: fadeUp 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .notif.success { border-color: var(--success); }
+  .notif.error { border-color: var(--error); }
+
+  /* ─── UPLOAD SCREEN ─── */
+  #screen-upload {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 24px;
+  }
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 20px;
+    padding: 52px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: var(--surface);
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(0,200,255,0.04);
+  }
+  .upload-zone input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .upload-icon { font-size: 44px; margin-bottom: 16px; }
+  .upload-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .upload-sub { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .upload-types {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .upload-type-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text3);
+  }
+  .file-preview {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--success);
+    border-radius: 14px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    align-items: center;
+    gap: 14px;
+  }
+  .file-preview.visible { display: flex; }
+  .file-preview-icon { font-size: 28px; }
+  .file-preview-info { flex: 1; }
+  .file-preview-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+  .file-preview-size { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text2); }
+  .file-remove-btn {
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px;
+    transition: color 0.2s;
+  }
+  .file-remove-btn:hover { color: var(--error); }
+
+  .intent-block { margin-bottom: 24px; }
+  .intent-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: block;
+  }
+  .intent-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    padding: 16px 18px;
+    resize: none;
+    min-height: 100px;
+    line-height: 1.6;
+    transition: border-color 0.2s;
+  }
+  .intent-input:focus { outline: none; border-color: var(--accent); }
+  .intent-input::placeholder { color: var(--text3); }
+
+  .intent-examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .intent-chip {
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .intent-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+  .generating-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,14,26,0.92);
+    z-index: 300;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+  .generating-overlay.visible { display: flex; }
+  .gen-spinner {
+    width: 56px;
+    height: 56px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .gen-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; }
+  .gen-status { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2); letter-spacing: 1px; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+  /* ─── API KEY UI ─── */
+  .api-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 28px;
+    padding: 14px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    width: 100%;
+    max-width: 720px;
+    animation: fadeUp 0.6s 0.4s ease both;
+  }
+  .api-bar-left { display: flex; align-items: center; gap: 12px; }
+  .api-provider-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--text3);
+    white-space: nowrap;
+  }
+  .api-provider-badge.claude { background: rgba(123,111,255,0.12); border-color: rgba(123,111,255,0.3); color: #7b6fff; }
+  .api-provider-badge.openai { background: rgba(0,200,255,0.1); border-color: rgba(0,200,255,0.3); color: var(--accent); }
+  .api-provider-badge.gemini { background: rgba(0,229,160,0.1); border-color: rgba(0,229,160,0.3); color: var(--success); }
+  .api-bar-hint { font-size: 12px; color: var(--text3); }
+
+  .api-panel {
+    width: 100%;
+    max-width: 720px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-top: 12px;
+    animation: fadeUp 0.2s ease;
+  }
+  .api-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .api-key-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 12px 48px 12px 16px;
+    transition: border-color 0.2s;
+  }
+  .api-key-input:focus { outline: none; border-color: var(--accent); }
+  .api-key-input::placeholder { color: var(--text3); font-family: 'DM Sans', sans-serif; }
+  .api-key-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--text3);
+    padding: 4px;
+  }
+  .provider-detect-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: rgba(0,200,255,0.05);
+    border: 1px solid rgba(0,200,255,0.15);
+    margin-bottom: 12px;
+    font-size: 13px;
+    animation: fadeUp 0.2s ease;
+  }
+  .provider-detected-icon { font-size: 18px; }
+  .api-provider-hints {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px;
+    background: var(--surface2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .api-hint-item { font-size: 12px; color: var(--text2); font-family: 'DM Mono', monospace; }
+  .api-hint-prefix { font-weight: 400; }
+
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ LANDING ═══════════════════════════ -->
+<div id="screen-landing" class="screen active">
+  <div class="landing-badge">Hillsborough Community College · AI PREP4WORK</div>
+  <h1 class="landing-title">AI in My<br><span class="highlight">Field</span></h1>
+  <p class="landing-sub">Professional Work Simulation Platform. Evaluate, supervise, and correct AI-generated outputs in realistic workplace scenarios.</p>
+  <div class="disciplines-grid">
+    <div class="disc-card" style="--card-color:#00e5a0;--card-glow:rgba(0,229,160,0.06)" onclick="goToUpload('accounting')">
+      <div class="disc-icon">📊</div>
+      <div class="disc-name">Accounting</div>
+      <div class="disc-desc">Upload financial statements, audit reports, or GAAP documents.</div>
+      <span class="disc-tag">Upload Your Doc</span>
+    </div>
+    <div class="disc-card" style="--card-color:#ff4c6b;--card-glow:rgba(255,76,107,0.06)" onclick="goToUpload('cybersecurity')">
+      <div class="disc-icon">🔐</div>
+      <div class="disc-name">Cybersecurity</div>
+      <div class="disc-desc">Upload threat logs, vulnerability reports, or security assessments.</div>
+      <span class="disc-tag">Upload Your Doc</span>
+    </div>
+    <div class="disc-card" style="--card-color:#ffd166;--card-glow:rgba(255,209,102,0.06)" onclick="goToUpload('construction')">
+      <div class="disc-icon">🏗️</div>
+      <div class="disc-name">Construction Management</div>
+      <div class="disc-desc">Upload site plans, safety assessments, or project schedules.</div>
+      <span class="disc-tag">Upload Your Doc</span>
+    </div>
+    <div class="disc-card" style="--card-color:#7b6fff;--card-glow:rgba(123,111,255,0.06)" onclick="goToUpload('business')">
+      <div class="disc-icon">💼</div>
+      <div class="disc-name">Business & Entrepreneurship</div>
+      <div class="disc-desc">Upload business plans, market analyses, or financial projections.</div>
+      <span class="disc-tag">Upload Your Doc</span>
+    </div>
+  </div>
+  <p style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace;">Select a discipline · Upload a document · AI generates your simulation</p>
+
+  <!-- API Key Bar -->
+  <div class="api-bar" id="api-bar">
+    <div class="api-bar-left">
+      <span class="api-provider-badge" id="api-provider-badge">🔑 No API Key</span>
+      <span class="api-bar-hint" id="api-bar-hint">Enter an API key to begin</span>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="toggleApiPanel()">⚙ Configure</button>
+  </div>
+
+  <!-- API Key Panel -->
+  <div class="api-panel" id="api-panel" style="display:none">
+    <div class="api-panel-header">
+      <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px">AI Provider Setup</span>
+      <button onclick="toggleApiPanel()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:16px;">Paste any API key below. The platform automatically detects whether it's Claude, GPT-4o, or Gemini and routes accordingly.</p>
+    <div style="position:relative;margin-bottom:12px">
+      <input class="api-key-input" id="api-key-input" type="password" placeholder="Paste your API key here..." oninput="detectProvider(this.value)">
+      <button class="api-key-toggle" onclick="toggleKeyVisibility()" id="key-toggle-btn">👁</button>
+    </div>
+    <div class="provider-detect-row" id="provider-detect-row" style="display:none">
+      <span class="provider-detected-icon" id="detected-icon"></span>
+      <span class="provider-detected-label" id="detected-label"></span>
+    </div>
+    <div class="api-provider-hints">
+      <div class="api-hint-item"><span class="api-hint-prefix" style="color:#7b6fff">sk-ant-...</span> → Claude (Anthropic)</div>
+      <div class="api-hint-item"><span class="api-hint-prefix" style="color:#00c8ff">sk-proj-... or sk-...</span> → GPT-4o (OpenAI)</div>
+      <div class="api-hint-item"><span class="api-hint-prefix" style="color:#00e5a0">AIza...</span> → Gemini (Google)</div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+      <button class="btn btn-secondary btn-sm" onclick="clearApiKey()">Clear</button>
+      <button class="btn btn-primary btn-sm" onclick="saveApiKey()">Save Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ SCENARIOS ═══════════════════════════ -->
+<div id="screen-scenarios" class="screen">
+  <button class="back-btn" onclick="showScreen('landing')">← Back</button>
+  <div class="section-header">
+    <div class="eyebrow" id="scenarios-eyebrow">Accounting</div>
+    <h2>Select a Scenario</h2>
+  </div>
+  <div class="scenario-list" id="scenario-list"></div>
+</div>
+
+<!-- ═══════════════════════════ UPLOAD ═══════════════════════════ -->
+<div id="screen-upload" class="screen">
+  <button class="back-btn" onclick="showScreen('landing')">← Back</button>
+  <div class="section-header">
+    <div class="eyebrow" id="upload-eyebrow">Accounting</div>
+    <h2>Upload Your Document</h2>
+  </div>
+  <p style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:28px;">Upload a real professional document from your field. Your selected AI will read it, then generate a professional output based on your task — with intentional errors for you to find and correct.</p>
+
+  <div class="upload-zone" id="upload-zone">
+    <input type="file" id="file-input" accept=".pdf,.txt,.csv,.png,.jpg,.jpeg" onchange="handleFileSelect(event)">
+    <div class="upload-icon">📄</div>
+    <div class="upload-title">Drop your document here</div>
+    <div class="upload-sub">Or click to browse your files</div>
+    <div class="upload-types">
+      <span class="upload-type-tag">PDF</span>
+      <span class="upload-type-tag">TXT</span>
+      <span class="upload-type-tag">CSV</span>
+      <span class="upload-type-tag">PNG / JPG</span>
+    </div>
+  </div>
+
+  <div class="file-preview" id="file-preview">
+    <span class="file-preview-icon" id="file-icon">📄</span>
+    <div class="file-preview-info">
+      <div class="file-preview-name" id="file-name">document.pdf</div>
+      <div class="file-preview-size" id="file-size">0 KB</div>
+    </div>
+    <button class="file-remove-btn" onclick="clearFile()">✕</button>
+  </div>
+
+  <div class="intent-block">
+    <span class="intent-label">What do you want to do with this document?</span>
+    <textarea class="intent-input" id="intent-input" placeholder="Describe the task you'd ask an AI to perform on this document..." oninput="checkGenerateReady()"></textarea>
+    <div class="intent-examples" id="intent-examples"></div>
+  </div>
+
+  <div style="display:flex;justify-content:flex-end;gap:12px;">
+    <button class="btn btn-secondary" onclick="showScreen('landing')">Cancel</button>
+    <button class="btn btn-primary" id="generate-btn" onclick="generateScenario()" disabled>Generate Simulation →</button>
+  </div>
+</div>
+
+<!-- Generating overlay -->
+<div class="generating-overlay" id="generating-overlay">
+  <div class="gen-spinner"></div>
+  <div class="gen-title">Building Your Simulation</div>
+  <div class="gen-status" id="gen-status">Reading your document...</div>
+</div>
+
+<!-- ═══════════════════════════ SIMULATION ═══════════════════════════ -->
+<div id="screen-sim" class="screen">
+  <div class="sim-header">
+    <div class="sim-title-block">
+      <div class="eyebrow" id="sim-eyebrow">Scenario 1</div>
+      <h2 id="sim-title">Loading...</h2>
+    </div>
+    <div class="sim-progress">
+      <div class="progress-step active" id="step1"></div>
+      <div class="progress-step" id="step2"></div>
+      <div class="progress-step" id="step3"></div>
+      <div class="progress-step" id="step4"></div>
+      <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);margin-left:8px;" id="step-label">Review</span>
+    </div>
+  </div>
+
+  <div class="scenario-context" id="sim-context"></div>
+
+  <div class="sim-layout">
+    <!-- LEFT: AI Output -->
+    <div>
+      <div class="sim-panel" style="margin-bottom:16px">
+        <div class="panel-header">
+          <span class="panel-label">AI-Generated Output</span>
+          <span class="panel-badge badge-ai">⚡ AI Generated</span>
+        </div>
+        <div class="panel-body">
+          <div class="ai-output" id="ai-output"></div>
+        </div>
+      </div>
+      <div class="sim-panel">
+        <div class="panel-header">
+          <span class="panel-label">AI Assistant</span>
+          <span class="panel-badge badge-ai">Ask anything</span>
+        </div>
+        <div class="panel-body">
+          <div class="chat-box" id="chat-box">
+            <div class="chat-msg ai">👋 I'm your AI field guide. Ask me anything about the scenario — professional standards, regulations, or clarifying questions. I won't tell you where the errors are, but I can help you reason through it.</div>
+          </div>
+          <div class="chat-input-row">
+            <input class="chat-input" id="chat-input" placeholder="Ask a question about this scenario..." onkeydown="handleChatKey(event)">
+            <button class="btn btn-primary btn-sm" onclick="sendChat()">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Analysis -->
+    <div>
+      <div class="sim-panel" style="margin-bottom:16px">
+        <div class="panel-header">
+          <span class="panel-label">Error Investigation</span>
+          <span class="panel-badge badge-warn">⚠ Find the errors</span>
+        </div>
+        <div class="panel-body">
+          <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">Check any errors you identify in the AI output. Hover over highlighted text for hints.</p>
+          <div class="error-checklist" id="error-checklist"></div>
+        </div>
+      </div>
+      <div class="sim-panel">
+        <div class="panel-header">
+          <span class="panel-label">Your Analysis</span>
+          <span class="panel-badge" style="background:rgba(0,200,255,0.1);color:var(--accent);border:1px solid rgba(0,200,255,0.2)">Written Response</span>
+        </div>
+        <div class="panel-body">
+          <textarea class="response-area" id="student-response" placeholder="Explain your findings. What errors did you identify? What are the professional and practical implications? What corrections would you make?"></textarea>
+          <div class="submit-row">
+            <button class="btn btn-secondary" onclick="goToUpload(currentDiscipline)">Cancel</button>
+            <button class="btn btn-primary" onclick="submitAnalysis()" id="submit-btn">Submit Analysis →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ RESULTS ═══════════════════════════ -->
+<div id="screen-results" class="screen">
+  <div class="result-header">
+    <div class="score-ring">
+      <svg viewBox="0 0 120 120" width="140" height="140">
+        <circle class="ring-bg" cx="60" cy="60" r="52"/>
+        <circle class="ring-fill" id="score-circle" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="326.7"/>
+      </svg>
+      <div class="score-text">
+        <div class="score-num" id="result-score">0</div>
+        <div class="score-label">/ 100</div>
+      </div>
+    </div>
+    <h2 class="result-title" id="result-headline">Analysis Complete</h2>
+    <p class="result-sub" id="result-sub">Your simulation results are ready.</p>
+  </div>
+
+  <div class="rubric-grid" id="rubric-grid"></div>
+
+  <div class="feedback-block">
+    <h3>🤖 AI Evaluation Feedback</h3>
+    <p id="feedback-text">Loading...</p>
+  </div>
+
+  <div class="feedback-block">
+    <h3>🔍 Error Detection Results</h3>
+    <div class="errors-found" id="errors-found"></div>
+  </div>
+
+  <div class="result-actions">
+    <button class="btn btn-secondary" onclick="goToUpload(currentDiscipline)">Try Another Document</button>
+    <button class="btn btn-primary" onclick="showScreen('landing')">Choose New Discipline</button>
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip-popup" id="tooltip" style="display:none"></div>
+
+<script>
+// ═══════════════════ DATA ═══════════════════
+const SCENARIOS = {
+  accounting: [
+    {
+      id: 'acc1',
+      title: 'Q3 Income Statement Review',
+      desc: 'Review an AI-drafted quarterly income statement for a mid-size retail company.',
+      difficulty: 'Intermediate',
+      context: 'You are a staff accountant at Morrison Retail Group. Your supervisor has asked you to review an AI-generated Q3 Income Statement before it goes to leadership. The company follows GAAP standards.',
+      aiOutput: `MORRISON RETAIL GROUP
+Q3 Income Statement (July–September 2024)
+
+Revenue
+  Net Sales Revenue:           $4,250,000
+  Interest Income:               $12,500
+Total Revenue:                 $4,262,500
+
+Cost of Goods Sold:            $2,890,000
+Gross Profit:                  $1,372,500
+Gross Margin:                       32.3%
+
+Operating Expenses
+  Salaries & Wages:              $380,000
+  Rent & Occupancy:               $95,000
+  Marketing:                      $42,000
+  Depreciation:                   $18,000
+  Research & Development:         $67,000
+  Legal Settlement Reserve:       $45,000
+Total Operating Expenses:        $647,000
+
+Operating Income (EBIT):         $725,500
+
+Other Income/Expense
+  Gain on Sale of Land:          $220,000
+  Interest Expense:              ($28,000)
+Net Other Income:                $192,000
+
+Income Before Tax:               $917,500
+Income Tax Expense:              $110,000   [Effective Rate: 12%]
+Net Income:                      $807,500
+
+EPS (Basic):                       $2.15
+Shares Outstanding:            375,500`,
+      errors: [
+        {
+          id: 'e1',
+          label: 'R&D classified as Operating Expense',
+          hint: 'R&D costs must be expensed as incurred under ASC 730 — but check if this company has a product that would make R&D unusual.',
+          detail: 'A retail company typically has no R&D. Classifying $67,000 as R&D for a retail firm suggests either a misclassification (likely marketing/product testing costs) or an unusual disclosure that requires explanation under ASC 730.',
+          severity: 'high'
+        },
+        {
+          id: 'e2',
+          label: 'Gain on Sale of Land above Operating Income',
+          hint: 'Where should non-operating income appear in the GAAP income statement structure?',
+          detail: 'Under GAAP, the gain on sale of land is a non-operating item and is correctly placed below EBIT. However, at $220,000 it is material and should be separately disclosed with nature, amount, and tax effect noted. No disclosure is provided here.',
+          severity: 'medium'
+        },
+        {
+          id: 'e3',
+          label: 'Effective Tax Rate of 12% is unrealistically low',
+          hint: 'What is the US federal corporate income tax rate? What effective rate range is typical for retail companies?',
+          detail: 'The US federal corporate tax rate is 21%. With state taxes, effective rates for retail typically range from 23–28%. A 12% effective rate ($110,000 / $917,500) would require significant tax credits or deferred tax assets that are not disclosed — a GAAP presentation issue.',
+          severity: 'high'
+        },
+        {
+          id: 'e4',
+          label: 'Interest Income classified in Revenue',
+          hint: 'Under GAAP, where is interest income reported for a non-financial company?',
+          detail: 'For a non-financial company, interest income is a non-operating item and should appear in "Other Income/Expense," not within Revenue. Including it in Revenue inflates top-line Revenue figures and violates proper income statement classification.',
+          severity: 'medium'
+        }
+      ]
+    },
+    {
+      id: 'acc2',
+      title: 'Revenue Recognition Analysis',
+      desc: 'Evaluate an AI analysis of a software company\'s revenue recognition policy under ASC 606.',
+      difficulty: 'Advanced',
+      context: 'You work in the audit department at a CPA firm. The client is CloudBridge SaaS Inc. An AI prepared the following revenue recognition memo for their annual audit file.',
+      aiOutput: `REVENUE RECOGNITION MEMO
+CloudBridge SaaS Inc. — Annual Audit File
+Prepared by: AI Analysis System
+
+SUMMARY
+CloudBridge offers three products: (1) perpetual software licenses, (2) annual maintenance contracts, and (3) professional services (implementation). The AI has determined all revenue may be recognized at the point of contract signature.
+
+ANALYSIS UNDER ASC 606
+
+Step 1 – Identify the Contract: ✓ Signed MSA exists for all customers.
+Step 2 – Identify Performance Obligations: The AI identifies ONE combined performance obligation for bundled sales of all three services.
+Step 3 – Determine Transaction Price: Total contract value is used as transaction price.
+Step 4 – Allocate Transaction Price: Full transaction price allocated to the single combined obligation.
+Step 5 – Recognize Revenue: Revenue recognized on contract signature date for all three components.
+
+CONCLUSION
+All $8.2M in contract value for Q4 may be recognized immediately upon signing. No deferred revenue is necessary.`,
+      errors: [
+        {
+          id: 'e1',
+          label: 'Incorrectly treating 3 products as one performance obligation',
+          hint: 'Under ASC 606, when are multiple goods/services considered a single performance obligation vs. separate ones?',
+          detail: 'ASC 606 requires identifying distinct performance obligations. A perpetual license, maintenance contract, and professional services are each distinct — they have separate value to the customer and CloudBridge regularly sells them separately. They must be accounted for as three separate performance obligations.',
+          severity: 'high'
+        },
+        {
+          id: 'e2',
+          label: 'Maintenance/support revenue recognized immediately instead of over time',
+          hint: 'How should subscription or maintenance revenue be recognized under ASC 606?',
+          detail: 'Annual maintenance contracts are performance obligations satisfied over time (as the customer receives ongoing support/updates). Revenue must be recognized ratably over the contract term — not on the signing date. Recognizing it immediately overstates current period revenue.',
+          severity: 'high'
+        },
+        {
+          id: 'e3',
+          label: 'Professional services recognized on signature instead of as delivered',
+          hint: 'When are professional services performance obligations typically satisfied?',
+          detail: 'Implementation/professional services are recognized as services are performed (over time or at completion of milestones), not at contract signature. The AI\'s conclusion would improperly accelerate revenue recognition for services not yet delivered.',
+          severity: 'medium'
+        }
+      ]
+    },
+    {
+      id: 'acc3',
+      title: 'Lease Accounting Under ASC 842',
+      desc: 'Review an AI-prepared lease classification memo for a manufacturing company.',
+      difficulty: 'Intermediate',
+      context: 'Your client, Precision Parts LLC, leases equipment and office space. An AI assistant prepared the following lease classification analysis as part of year-end close.',
+      aiOutput: `LEASE CLASSIFICATION ANALYSIS
+Precision Parts LLC — FY2024
+
+OVERVIEW
+The AI has reviewed all leases and classified them as operating leases. No finance leases were identified.
+
+LEASE #1 — CNC Machining Equipment
+  Lease Term: 7 years (equipment life: 8 years)
+  Purchase Option: Yes — at $1 (bargain purchase)
+  Payments: $12,000/month
+  Classification: OPERATING LEASE
+
+LEASE #2 — Office Building  
+  Lease Term: 5 years (building life: 40 years)
+  Ownership transfer at end: No
+  Payments: $8,500/month
+  Classification: OPERATING LEASE
+
+LEASE #3 — Delivery Vehicles (Fleet of 6)
+  Lease Term: 4 years (vehicle life: 6 years)
+  PV of Payments: $185,000; Fair Value of vehicles: $195,000 (PV = 94.9% of FV)
+  Classification: OPERATING LEASE
+
+RECOMMENDATION: Record all leases as operating leases. No finance lease right-of-use assets required.`,
+      errors: [
+        {
+          id: 'e1',
+          label: 'Lease #1 should be a Finance Lease (bargain purchase option)',
+          hint: 'Under ASC 842, what criteria automatically classify a lease as a finance lease?',
+          detail: 'A $1 bargain purchase option almost certainly will be exercised, meeting the ASC 842 finance lease criteria (transfer of ownership or bargain purchase option). Lease #1 must be classified as a finance lease, requiring amortization of the ROU asset and interest expense presentation — not a single operating lease line.',
+          severity: 'high'
+        },
+        {
+          id: 'e2',
+          label: 'Lease #3 should be a Finance Lease (PV ≥ 90% of fair value)',
+          hint: 'What is the ASC 842 bright-line test for when present value of payments indicates a finance lease?',
+          detail: 'Under ASC 842, if the PV of lease payments equals substantially all of the asset\'s fair value (generally 90%+), it is a finance lease. At 94.9%, Lease #3 clearly meets this threshold and must be classified as a finance lease.',
+          severity: 'high'
+        },
+        {
+          id: 'e3',
+          label: 'Lease term of Lease #1 covers 87.5% of asset life — economic life test',
+          hint: 'ASC 842 has a criteria related to the lease term relative to the asset\'s remaining economic life.',
+          detail: 'The CNC equipment lease term is 7 years out of an 8-year economic life (87.5%). This meets the "major part of the remaining economic life" criterion under ASC 842 (generally interpreted as 75%+), providing a second independent reason Lease #1 must be a finance lease.',
+          severity: 'medium'
+        }
+      ]
+    }
+  ],
+  cybersecurity: [
+    {
+      id: 'cyber1',
+      title: 'Threat Intelligence Report Review',
+      desc: 'Analyze an AI-generated threat intelligence report for a financial institution.',
+      difficulty: 'Intermediate',
+      context: 'You are a SOC Analyst at First Coastal Bank. An AI system has generated a threat intelligence report following a network anomaly alert. You must review it before it goes to the CISO.',
+      aiOutput: `THREAT INTELLIGENCE REPORT
+First Coastal Bank — Incident #TI-2024-0847
+Generated: Automated AI Analysis System
+
+EXECUTIVE SUMMARY
+A routine network scan detected unusual outbound traffic from workstation FIN-PC-042 (Finance Department). AI analysis has concluded this is LOW risk and likely a software update process. No immediate action required.
+
+INDICATORS OF COMPROMISE (IOCs)
+• Destination IP: 185.220.101.47 (flagged as TOR exit node)
+• Traffic Volume: 2.3GB outbound over 6 hours (11 PM–5 AM)
+• Protocol: HTTPS (port 443)
+• Frequency: Consistent beaconing every 4 minutes
+
+ANALYSIS
+The AI assessed the traffic pattern and determined:
+1. HTTPS traffic is encrypted and therefore safe
+2. The after-hours timing is consistent with automated backup processes
+3. Beaconing patterns are normal for software update clients
+4. The 2.3GB volume is within normal parameters for a workstation
+5. TOR exit node destination may indicate legitimate privacy-conscious software
+
+RISK ASSESSMENT: LOW
+RECOMMENDED ACTION: Log and monitor. No incident response needed.
+
+COMPLIANCE NOTE: PCI-DSS scope may not apply as the affected workstation handles only internal reports.`,
+      errors: [
+        {
+          id: 'e1',
+          label: 'TOR exit node communication is a critical red flag, not "low risk"',
+          hint: 'Why would a financial institution workstation communicating with a TOR exit node be highly suspicious?',
+          detail: 'Communication to a known TOR exit node from a corporate finance workstation is a major red flag indicating potential data exfiltration, C2 (command and control) communication, or insider threat activity. This alone warrants immediate incident response — not "log and monitor."',
+          severity: 'high'
+        },
+        {
+          id: 'e2',
+          label: 'HTTPS does not mean safe — encrypted exfiltration is common',
+          hint: 'Can data be stolen over HTTPS? What is SSL/TLS tunneling used for by attackers?',
+          detail: 'The AI\'s reasoning that "HTTPS traffic is encrypted and therefore safe" is fundamentally incorrect. Attackers routinely use encrypted channels for data exfiltration and C2 communications precisely because it evades simple inspection. Encryption indicates confidentiality, not legitimacy.',
+          severity: 'high'
+        },
+        {
+          id: 'e3',
+          label: 'Consistent 4-minute beaconing is a classic C2 indicator',
+          hint: 'What does regular, timed beaconing behavior typically indicate in threat intelligence?',
+          detail: 'Regular beaconing at consistent intervals (every 4 minutes) is a hallmark of Command & Control (C2) malware "checking in" with an attacker. This pattern is NOT consistent with normal software update clients, which beacon irregularly and to known vendor IPs, not TOR nodes.',
+          severity: 'high'
+        },
+        {
+          id: 'e4',
+          label: 'PCI-DSS compliance scope assessment is incorrect',
+          hint: 'Does a finance department workstation at a bank fall under PCI-DSS scope?',
+          detail: 'A finance department workstation at a financial institution almost certainly handles cardholder data or has network access to systems that do, making it in-scope for PCI-DSS. Declaring it out of scope without a formal scoping assessment violates PCI-DSS requirements and could create serious compliance liability.',
+          severity: 'medium'
+        }
+      ]
+    },
+    {
+      id: 'cyber2',
+      title: 'Vulnerability Assessment Report',
+      desc: 'Review an AI-generated vulnerability assessment for a healthcare network.',
+      difficulty: 'Advanced',
+      context: 'You are a cybersecurity analyst at Suncoast Regional Medical Center. An AI tool scanned your network and generated the following vulnerability assessment report.',
+      aiOutput: `VULNERABILITY ASSESSMENT REPORT
+Suncoast Regional Medical Center
+Scan Date: Automated Weekly Scan
+
+CRITICAL FINDINGS: 0
+HIGH FINDINGS: 2  
+MEDIUM FINDINGS: 8
+
+HIGH — CVE-2021-44228 (Log4Shell) detected on server MED-APP-03
+Recommendation: Schedule patching within 90 days.
+
+HIGH — Default credentials on medical device INFUSION-PUMP-07 (admin/admin)
+Recommendation: Change credentials at next scheduled maintenance window.
+
+MEDIUM — SSL certificate expiring in 14 days on patient portal
+Recommendation: Renew within 30 days.
+
+MEDIUM — Windows Server 2012 R2 End-of-Life detected on ADMIN-SRV-01
+Recommendation: Plan migration within 2 years.
+
+OVERALL RISK: MANAGEABLE
+The AI recommends proceeding with normal operations. No emergency remediation required.`,
+      errors: [
+        {
+          id: 'e1',
+          label: 'Log4Shell on a medical server requires immediate patching, not 90 days',
+          hint: 'CVE-2021-44228 (Log4Shell) has a CVSS score of 10.0. What does that mean for remediation timelines in healthcare?',
+          detail: 'Log4Shell (CVSS 10.0 — maximum severity) allows unauthenticated remote code execution. In a healthcare environment with PHI, HIPAA requires prompt remediation of critical vulnerabilities. A 90-day window is grossly inadequate — emergency patching or isolation is required. This should be classified as CRITICAL, not HIGH.',
+          severity: 'high'
+        },
+        {
+          id: 'e2',
+          label: 'Default credentials on an infusion pump is a patient safety emergency',
+          hint: 'What are the risks of a networked infusion pump with default credentials in a hospital?',
+          detail: 'An infusion pump with default credentials (admin/admin) is not merely a cybersecurity issue — it is a patient safety emergency. Unauthorized access could allow dosage manipulation. This requires immediate remediation (network isolation + credential change today), not "next maintenance window." FDA guidance mandates immediate action for exploitable medical device vulnerabilities.',
+          severity: 'high'
+        },
+        {
+          id: 'e3',
+          label: 'SSL cert expiring in 14 days requires action now, not within 30 days',
+          hint: 'What happens to the patient portal if the SSL certificate expires?',
+          detail: 'If the SSL certificate expires in 14 days but the recommendation is to act within 30 days, the patient portal will go down (or show security warnings) for 16 days. This disrupts patient access, violates HIPAA availability requirements, and causes reputational damage. Renewal must happen within days, not 30 days.',
+          severity: 'medium'
+        },
+        {
+          id: 'e4',
+          label: 'Windows Server 2012 R2 EOL is a HIPAA compliance issue, not a 2-year plan',
+          hint: 'What are the HIPAA and cybersecurity insurance implications of running end-of-life server software in healthcare?',
+          detail: 'Running EOL software that receives no security patches violates HIPAA Security Rule requirements for technical safeguards and may void cybersecurity insurance coverage. A "2-year migration plan" is unreasonable — HIPAA requires documented risk management with appropriate timelines, typically 12 months maximum for EOL systems holding PHI.',
+          severity: 'medium'
+        }
+      ]
+    },
+    {
+      id: 'cyber3',
+      title: 'Phishing Incident Analysis',
+      desc: 'Evaluate an AI-generated post-incident analysis after a phishing attack.',
+      difficulty: 'Beginner',
+      context: 'You are reviewing an AI-generated post-incident analysis after 3 employees at your company clicked a phishing link. The report will be shared with the executive team.',
+      aiOutput: `POST-INCIDENT ANALYSIS REPORT
+Phishing Event — October 14, 2024
+
+INCIDENT SUMMARY
+Three employees clicked a phishing link received via email. No malware was detected. The AI concludes this was a low-impact event with no data breach.
+
+ROOT CAUSE
+Employees lacked phishing awareness training. Issue is isolated to human error.
+
+IMPACT ASSESSMENT
+• Systems affected: None (no malware detected)
+• Data compromised: None confirmed
+• Business disruption: Minimal
+
+REMEDIATION COMPLETED
+✓ Phishing awareness email sent to all staff
+✓ Affected links blocked at firewall
+✓ Incident logged in ticketing system
+
+RECOMMENDATION
+Schedule annual phishing awareness training for next fiscal year. No further action needed. Case closed.`,
+      errors: [
+        {
+          id: 'e1',
+          label: 'Incident cannot be "closed" without forensic investigation of clicked systems',
+          hint: 'What must occur before declaring no breach after users click phishing links?',
+          detail: 'Simply not detecting malware is insufficient. Credentials may have been harvested (credential phishing), unauthorized access may have occurred, or malware may evade detection. All three affected workstations must be forensically examined, credentials reset, and network logs reviewed before the incident can be closed.',
+          severity: 'high'
+        },
+        {
+          id: 'e2',
+          label: 'No mention of regulatory notification requirements (HIPAA/GDPR/etc.)',
+          hint: 'What are the regulatory reporting timelines for potential data breaches?',
+          detail: 'The report assumes no breach occurred, but this has not been verified. If the organization handles PHI, PII, or financial data, regulatory notification requirements may be triggered even by suspected breaches. HIPAA requires breach notification within 60 days; GDPR within 72 hours. Failure to notify when required has severe penalties.',
+          severity: 'high'
+        },
+        {
+          id: 'e3',
+          label: '"Annual training next fiscal year" is insufficient — retraining should be immediate',
+          hint: 'What is the appropriate timeline for phishing awareness retraining after a phishing incident?',
+          detail: 'Scheduling training for "next fiscal year" after an active phishing incident is inadequate. Immediate targeted retraining for affected employees and a company-wide security alert are industry standards. NIST and ISO 27001 guidance requires timely corrective action, not deferring training by potentially 11 months.',
+          severity: 'medium'
+        }
+      ]
+    }
+  ],
+  construction: [
+    {
+      id: 'con1',
+      title: 'Site Safety Assessment Review',
+      desc: 'Review an AI-generated safety assessment for a commercial construction site.',
+      difficulty: 'Intermediate',
+      context: 'You are a Safety Officer at Summit Construction Inc. An AI tool generated the following site safety assessment for the Harborview Office Complex project. Review before the site superintendent acts on it.',
+      aiOutput: `SITE SAFETY ASSESSMENT
+Harborview Office Complex — Phase 2 Framing
+Assessment Date: AI-Generated (Based on submitted photos and project documents)
+
+OVERVIEW
+Phase 2 framing is 60% complete. Three-story steel frame. 45 workers on site.
+
+FALL PROTECTION
+Workers observed at 8–12 ft elevations. Fall protection equipment available on site.
+STATUS: COMPLIANT ✓
+Recommendation: Continue current practices.
+
+SCAFFOLDING
+Tubular scaffolding installed on west elevation, 18 ft high. No visible guardrails in photos.
+STATUS: COMPLIANT ✓
+Recommendation: Verify stability at next weekly inspection.
+
+PERSONAL PROTECTIVE EQUIPMENT
+Hard hats observed on majority of workers. Safety vests visible on most crew.
+STATUS: COMPLIANT ✓
+
+ELECTRICAL
+Temporary power panel observed near site entrance. Extension cords running through site.
+STATUS: MINOR CONCERN
+Recommendation: Ensure cords are rated for outdoor use.
+
+OVERALL ASSESSMENT: SAFE FOR CONTINUED OPERATIONS`,
+      errors: [
+        {
+          id: 'e1',
+          label: 'Fall protection at 8-12 ft is non-compliant without specific equipment',
+          hint: 'What does OSHA 1926.502 require for fall protection in construction? At what height does it apply?',
+          detail: 'OSHA 1926.502 requires fall protection for construction workers at 6 feet or more above a lower level. Workers at 8-12 ft without documented fall arrest systems, guardrails, or safety nets are in violation. The AI should not have marked this COMPLIANT based on equipment being "available on site" — it must be in use.',
+          severity: 'high'
+        },
+        {
+          id: 'e2',
+          label: '18 ft scaffolding without guardrails is a serious OSHA violation',
+          hint: 'What does OSHA 29 CFR 1926.451 require for scaffolding guardrails?',
+          detail: 'OSHA 29 CFR 1926.451 requires guardrails on all open sides and ends of scaffolds 10 feet or higher. The AI acknowledged "no visible guardrails" and still marked it COMPLIANT. This is a serious violation that must be corrected before scaffolding is used — not at the "next weekly inspection."',
+          severity: 'high'
+        },
+        {
+          id: 'e3',
+          label: 'PPE "majority" and "most" workers is non-compliant — 100% required',
+          hint: 'OSHA requires PPE for all workers in hazardous zones — is "majority" acceptable?',
+          detail: 'OSHA hard hat requirements (29 CFR 1926.100) apply to all workers in areas where head injury is possible — not a majority. The AI rating this COMPLIANT because "most" workers have PPE is incorrect. Any worker without required PPE is a citation-level violation, particularly at an active framing site.',
+          severity: 'medium'
+        },
+        {
+          id: 'e4',
+          label: 'Extension cords near a construction entrance require GFCI protection, not just outdoor rating',
+          hint: 'What does OSHA 1926.404(b) require for temporary power on construction sites?',
+          detail: 'OSHA 1926.404(b) requires GFCI (Ground Fault Circuit Interrupter) protection for all 120V, 15/20A temporary power on construction sites. The AI only flagged cord rating — it missed the GFCI requirement, which is a critical electrical safety requirement that prevents electrocution.',
+          severity: 'medium'
+        }
+      ]
+    },
+    {
+      id: 'con2',
+      title: 'Concrete Pour Quality Report',
+      desc: 'Review an AI-generated quality control report for a foundation pour.',
+      difficulty: 'Intermediate',
+      context: 'You are the QC Manager for a concrete contractor. An AI-assisted quality system generated this report for a critical foundation pour at a 4-story apartment building.',
+      aiOutput: `CONCRETE POUR QC REPORT
+Pinecrest Apartments — Foundation Slab
+Pour Date: Sequential Placement, Section A–D
+
+MIX DESIGN
+Specified: 4,000 PSI at 28 days, w/c ratio 0.45 max
+AI-Measured w/c ratio: 0.52 at time of pour
+STATUS: ACCEPTABLE — within workability range
+
+SLUMP TEST
+Specified: 4 inches max
+Recorded Slump: 7 inches
+STATUS: ACCEPTABLE — concrete was still workable and placed successfully
+
+TEMPERATURE
+Ambient: 34°F (cold weather conditions)
+Concrete temp at delivery: 58°F
+STATUS: ACCEPTABLE
+
+CYLINDER SAMPLES
+4 break cylinders collected. 2 broken at 7 days: avg 2,100 PSI
+STATUS: ACCEPTABLE — 28-day strength is what matters
+
+CURING
+Poly sheeting placed over slab. Curing compound applied.
+STATUS: ADEQUATE`,
+      errors: [
+        {
+          id: 'e1',
+          label: 'w/c ratio of 0.52 exceeds specified 0.45 maximum — reject or document',
+          hint: 'What does exceeding the specified water-cement ratio mean for concrete strength and durability?',
+          detail: 'A w/c ratio of 0.52 vs. specified 0.45 directly reduces compressive strength and durability. This is a specification non-conformance that requires engineer notification, documentation, and a structural evaluation — not "acceptable." Higher w/c increases porosity and freeze-thaw vulnerability, critical for a foundation.',
+          severity: 'high'
+        },
+        {
+          id: 'e2',
+          label: '7-inch slump far exceeds 4-inch specification — concrete must be rejected or evaluated',
+          hint: 'What are the consequences of placing concrete with slump significantly exceeding specifications?',
+          detail: 'A 7-inch slump vs. 4-inch spec indicates excess water was added (increasing w/c ratio further) or a mix design change. Concrete should have been rejected at the truck, or water addition documented with engineer approval. Placing out-of-spec concrete in a structural foundation without engineer sign-off is a serious quality and liability issue.',
+          severity: 'high'
+        },
+        {
+          id: 'e3',
+          label: '34°F ambient requires cold weather concrete procedures (ACI 306)',
+          hint: 'What does ACI 306 require when ambient temperatures fall below 40°F during concrete placement?',
+          detail: 'ACI 306 (Cold Weather Concreting) requires special provisions when temperatures are at or below 40°F, including concrete temperature monitoring, insulated forms/blankets, extended curing periods, and possibly heated enclosures. At 34°F ambient, poly sheeting alone is insufficient — the concrete is at high risk of freezing before gaining adequate strength.',
+          severity: 'high'
+        },
+        {
+          id: 'e4',
+          label: '7-day break of 2,100 PSI is a red flag for achieving 4,000 PSI at 28 days',
+          hint: 'What percentage of 28-day strength should concrete typically achieve by 7 days?',
+          detail: 'Concrete typically achieves 60-70% of 28-day strength by 7 days. At 2,100 PSI at 7 days, the projected 28-day strength is only ~3,000-3,500 PSI — below the specified 4,000 PSI. The AI dismissing this as "28-day strength is what matters" ignores this critical early warning that should trigger engineer notification.',
+          severity: 'medium'
+        }
+      ]
+    },
+    {
+      id: 'con3',
+      title: 'Project Schedule Delay Analysis',
+      desc: 'Review an AI-generated schedule delay analysis for a public works project.',
+      difficulty: 'Beginner',
+      context: 'You are a Project Manager at a general contracting firm. An AI assistant prepared this schedule delay analysis for a public school renovation project that is 6 weeks behind.',
+      aiOutput: `PROJECT SCHEDULE DELAY ANALYSIS
+Eastview Elementary School Renovation
+Contract Duration: 10 months | Current Delay: 6 weeks
+
+DELAY CAUSES IDENTIFIED BY AI
+1. Weather delays (3 weeks) — Attributed to owner as excusable
+2. Material lead time for windows (3 weeks) — Attributed to subcontractor
+
+IMPACT ANALYSIS
+The AI calculates: 3 weeks owner + 3 weeks sub = 6 weeks total delay. Simple addition applied.
+No float analysis performed.
+
+RECOMMENDED ACTIONS
+• Request 3-week time extension from owner for weather delays
+• Backcharge subcontractor $45,000 for 3 weeks of extended GC overhead
+• No additional compensation sought from owner
+
+CONCLUSION
+Weather delays are owner-responsible excusable delays. File time extension request.
+Subcontractor is responsible for window delay damages.`,
+      errors: [
+        {
+          id: 'e1',
+          label: 'Weather delays are excusable but not always compensable — distinction matters',
+          hint: 'In construction contracts, what is the difference between an excusable delay and a compensable delay?',
+          detail: 'Excusable delays (like weather) entitle the contractor to a time extension but typically NOT additional money under standard contracts (AIA, ConsensPro). The AI did not distinguish between time relief and monetary compensation. Before requesting extension, the contract must be reviewed to confirm whether weather delays are compensable or only excusable.',
+          severity: 'high'
+        },
+        {
+          id: 'e2',
+          label: 'No critical path analysis — delays may not all impact completion date',
+          hint: 'Why is float analysis and critical path method essential in delay analysis?',
+          detail: 'The AI\'s "simple addition" of delays ignores CPM (Critical Path Method) analysis. If the window installation had 2 weeks of float, the subcontractor\'s 3-week delay only caused 1 week of critical delay. Without float analysis, the delay attribution and damages are incorrect and legally indefensible in a claim or dispute.',
+          severity: 'high'
+        },
+        {
+          id: 'e3',
+          label: 'Concurrent delay not analyzed — complicates damages claims',
+          hint: 'What is concurrent delay and how does it affect compensation claims?',
+          detail: 'Weather delays (owner-responsible) and window delays (sub-responsible) occurred simultaneously. Concurrent delay doctrine typically prevents either party from recovering damages when both parties contributed to the delay during the same period. The AI\'s backcharge recommendation ignores this significant legal defense the subcontractor would have.',
+          severity: 'medium'
+        }
+      ]
+    }
+  ],
+  business: [
+    {
+      id: 'biz1',
+      title: 'Startup Business Plan Review',
+      desc: 'Critique an AI-generated business plan for a food tech startup.',
+      difficulty: 'Intermediate',
+      context: 'You are a business advisor at a SBDC (Small Business Development Center). A first-time entrepreneur has submitted an AI-generated business plan for FreshDrop, a same-day grocery delivery startup.',
+      aiOutput: `FRESHDROP BUSINESS PLAN SUMMARY
+AI-Generated · First Draft
+
+CONCEPT
+FreshDrop will deliver premium organic groceries same-day in Tampa, FL. Launch Q1 2025.
+
+MARKET ANALYSIS
+Total Addressable Market (TAM): $800 billion (US grocery market)
+Serviceable Addressable Market (SAM): $50 billion (online grocery)
+Target Market Share: 5% of Tampa market within Year 1
+
+FINANCIAL PROJECTIONS
+Year 1 Revenue: $4.2 million
+Year 1 Customers: 14,000 active monthly subscribers
+Year 1 Operating Costs: $3.8 million
+Year 1 Net Profit: $400,000
+
+CUSTOMER ACQUISITION
+Strategy: Social media marketing (Instagram, TikTok)
+CAC (Customer Acquisition Cost): $8 per customer
+Lifetime Value (LTV): $1,200
+
+COMPETITIVE ANALYSIS
+Main competitors: Instacart, Amazon Fresh, Walmart+
+Competitive Advantage: "Better service and fresher produce"
+
+FUNDING REQUEST
+Seeking $500,000 seed funding. Investor ROI projected at 300% in 18 months.`,
+      errors: [
+        {
+          id: 'e1',
+          label: '5% market share in Year 1 is unrealistic for a new startup',
+          hint: 'What market share can a startup realistically capture in Year 1 competing against Instacart and Amazon?',
+          detail: 'A new startup capturing 5% of the Tampa online grocery market in Year 1 — directly competing against Instacart, Amazon Fresh, and Walmart+ — is highly unrealistic. Most successful startups capture <1% in their first year. This projection undermines credibility with investors and suggests the entrepreneur does not understand competitive market dynamics.',
+          severity: 'high'
+        },
+        {
+          id: 'e2',
+          label: '$8 CAC for grocery delivery startup is far too low',
+          hint: 'What are typical customer acquisition costs for grocery delivery and food tech startups?',
+          detail: 'Industry benchmarks for grocery/delivery app CAC typically range from $50-$150 per customer when including all paid marketing, promotions, and referral costs. A $8 CAC via social media alone for 14,000 customers suggests the plan does not account for realistic marketing spend, discounts, or a referral program — leading to a $4.2M revenue projection built on false assumptions.',
+          severity: 'high'
+        },
+        {
+          id: 'e3',
+          label: '"Better service and fresher produce" is not a defensible competitive advantage',
+          hint: 'What makes a competitive advantage defensible? Is service quality alone a moat against Amazon and Walmart?',
+          detail: 'Claiming "better service and fresher produce" against Amazon, Instacart, and Walmart is not a differentiated, defensible competitive advantage. These giants have massive logistics networks, supplier relationships, and capital. A viable competitive advantage should be specific, measurable, and difficult to replicate (e.g., a unique sourcing partnership, proprietary tech, or an underserved niche).',
+          severity: 'high'
+        },
+        {
+          id: 'e4',
+          label: '300% ROI in 18 months is an unsupported and implausible projection',
+          hint: 'What is a realistic ROI expectation for seed-stage food tech investments?',
+          detail: 'Promising 300% ROI in 18 months to investors for a grocery startup is not credible and would likely end the funding conversation. Seed-stage food tech investments typically target 3-5x returns over 5-7 years. Projecting 3x in 18 months with no proof of concept or traction signals financial naivety and will damage investor trust.',
+          severity: 'medium'
+        }
+      ]
+    },
+    {
+      id: 'biz2',
+      title: 'Market Expansion Strategy',
+      desc: 'Evaluate an AI-generated international expansion strategy for a regional retailer.',
+      difficulty: 'Advanced',
+      context: 'You are a senior consultant at a strategy firm. A regional clothing retailer (12 stores in the Southeast US, $28M annual revenue) has an AI-generated expansion plan to enter international markets.',
+      aiOutput: `INTERNATIONAL EXPANSION STRATEGY
+SunStyle Apparel — Regional to Global
+AI Strategy Document
+
+RECOMMENDATION
+SunStyle should immediately pursue international expansion into 3 markets: Mexico, Germany, and Japan. Begin operations within 12 months across all three simultaneously.
+
+MARKET ENTRY MODE
+All three markets: Company-owned retail stores (direct entry)
+
+FINANCIAL REQUIREMENTS
+Estimated capital needed: $3.2 million
+Expected break-even: 18 months in all markets
+Revenue projection Year 2: $12 million international
+
+RISK ASSESSMENT
+Currency risk: Minimal (not material concern for small amounts)
+Regulatory risk: Low (retail is straightforward globally)
+Supply chain: Current US supplier network will serve all markets
+OVERALL RISK: LOW`,
+      errors: [
+        {
+          id: 'e1',
+          label: 'Simultaneous 3-country expansion is extremely high risk for a $28M company',
+          hint: 'What is a prudent internationalization sequence for a company of this size and stage?',
+          detail: 'International expansion into three culturally and geographically diverse markets simultaneously would likely overwhelm a 12-store regional retailer\'s management capacity and capital. Best practice (and academic frameworks like Uppsala Model) calls for sequential expansion, typically starting with one market with lower cultural distance (e.g., Canada) before tackling Germany and Japan.',
+          severity: 'high'
+        },
+        {
+          id: 'e2',
+          label: 'Company-owned stores in all markets ignores lower-risk entry alternatives',
+          hint: 'What market entry modes have lower capital requirements and risk for initial international expansion?',
+          detail: 'For a first-time international expansion, company-owned stores carry maximum capital requirement and risk. Licensing, franchising, joint ventures, or e-commerce entry are standard lower-risk alternatives that test market viability before major investment. The AI did not consider these options or explain why direct entry is appropriate for each specific market.',
+          severity: 'high'
+        },
+        {
+          id: 'e3',
+          label: 'Currency and regulatory risks are severely understated',
+          hint: 'What are the regulatory requirements for foreign retail operations in Germany (EU) and Japan?',
+          detail: 'Currency risk for USD/EUR/JPY/MXN fluctuations is material for a company this size. Germany requires EU GDPR compliance, employment law compliance (strong worker protections), and VAT registration. Japan has complex import regulations, a distinct retail culture, and requires local entity formation. Mexico has CFDI invoicing requirements. Calling these "Low" risk demonstrates a dangerous knowledge gap.',
+          severity: 'high'
+        },
+        {
+          id: 'e4',
+          label: 'US supplier network cannot serve Japan and Germany without major adjustments',
+          hint: 'What supply chain challenges arise when serving European and Japanese markets from US suppliers?',
+          detail: 'Serving Germany and Japan from US suppliers involves tariffs, customs duties, significantly longer lead times, CE marking requirements (EU), and potentially Japanese Industrial Standards compliance for certain goods. The cost structure of "fly goods from US suppliers" to Germany and Japan would likely make the business model uncompetitive on price.',
+          severity: 'medium'
+        }
+      ]
+    },
+    {
+      id: 'biz3',
+      title: 'Franchise Feasibility Analysis',
+      desc: 'Review an AI-generated feasibility study for a restaurant franchise investment.',
+      difficulty: 'Beginner',
+      context: 'A client is considering investing $350,000 to buy a fast-casual restaurant franchise. An AI tool generated this feasibility analysis to support their investment decision.',
+      aiOutput: `FRANCHISE INVESTMENT FEASIBILITY
+Quick Eats Grille — Tampa, FL Location
+AI Feasibility Analysis
+
+INVESTMENT SUMMARY
+Franchise fee: $45,000
+Buildout & equipment: $280,000
+Working capital: $25,000
+Total investment: $350,000
+
+REVENUE PROJECTIONS
+The AI projects Year 1 revenue at $1.1 million based on the franchisor's provided average unit volume (AUV) data for existing locations.
+
+PROFITABILITY ANALYSIS
+Gross Margin: 65%
+Royalty fees: 5%
+Operating expenses: 35%
+Projected Year 1 Net Profit: $275,000
+ROI: 78% in Year 1
+
+RISK FACTORS NOTED
+• Market competition (rated: Low)
+• Operational complexity (rated: Low)
+
+RECOMMENDATION: Strong buy. Expected payback period: 14 months.`,
+      errors: [
+        {
+          id: 'e1',
+          label: 'Using franchisor AUV as projected revenue ignores survivorship bias',
+          hint: 'Why should you be skeptical of franchisor Average Unit Volume data when projecting a new location\'s revenue?',
+          detail: 'Franchisors\' AUV figures represent averages of surviving, established locations — they exclude closed/failed units (survivorship bias) and don\'t account for new location ramp-up periods. A new location typically achieves 60-70% of AUV in Year 1. Using raw AUV as a projection for a new, unproven location overstates revenue significantly.',
+          severity: 'high'
+        },
+        {
+          id: 'e2',
+          label: '65% gross margin for fast-casual restaurant is unrealistically high',
+          hint: 'What are typical food cost percentages for fast-casual restaurants?',
+          detail: 'Fast-casual restaurants typically have food costs of 28-35% of revenue, yielding gross margins of 65-72% — so this appears correct on the surface. However, the analysis uses gross margin but then adds only "operating expenses: 35%" without separately itemizing labor (typically 30-35% of revenue for fast-casual), which would make the business unprofitable. The model appears to double-count or omit labor.',
+          severity: 'high'
+        },
+        {
+          id: 'e3',
+          label: 'No mention of Franchise Disclosure Document (FDD) analysis',
+          hint: 'What legal document must franchisors provide, and what critical information does it contain?',
+          detail: 'The FDD (Franchise Disclosure Document) is legally required to be provided to prospective franchisees and contains critical information: Item 19 (financial performance), Item 20 (franchise openings and closures), litigation history (Item 3), and actual franchisee contacts. Not reviewing or referencing the FDD in a franchise feasibility analysis is a serious professional omission.',
+          severity: 'high'
+        },
+        {
+          id: 'e4',
+          label: '14-month payback period for a restaurant franchise is unrealistically optimistic',
+          hint: 'What is the typical payback period range for fast-casual franchise investments?',
+          detail: 'Typical fast-casual franchise payback periods range from 3-5 years. A 14-month payback on $350,000 would require exceptional and sustained performance. Presenting this as a baseline projection rather than a best-case scenario is misleading and could expose the advisor to liability for unsuitable investment advice.',
+          severity: 'medium'
+        }
+      ]
+    }
+  ]
+};
+
+// ═══════════════════ API PROVIDER STATE ═══════════════════
+let activeApiKey = null;
+let activeProvider = null; // 'claude' | 'openai' | 'gemini'
+
+const PROVIDER_CONFIG = {
+  claude: {
+    name: 'Claude (Anthropic)',
+    icon: '🟣',
+    badgeClass: 'claude',
+    model: 'claude-sonnet-4-20250514',
+    detect: k => k.startsWith('sk-ant-')
+  },
+  openai: {
+    name: 'GPT-4o (OpenAI)',
+    icon: '🔵',
+    badgeClass: 'openai',
+    model: 'gpt-4o',
+    detect: k => k.startsWith('sk-proj-') || (k.startsWith('sk-') && !k.startsWith('sk-ant-'))
+  },
+  gemini: {
+    name: 'Gemini (Google)',
+    icon: '🟢',
+    badgeClass: 'gemini',
+    model: 'gemini-1.5-pro',
+    detect: k => k.startsWith('AIza')
+  }
+};
+
+function detectProviderFromKey(key) {
+  if (!key || key.length < 8) return null;
+  for (const [id, cfg] of Object.entries(PROVIDER_CONFIG)) {
+    if (cfg.detect(key)) return id;
+  }
+  return null;
+}
+
+function detectProvider(value) {
+  const provider = detectProviderFromKey(value);
+  const row = document.getElementById('provider-detect-row');
+  const icon = document.getElementById('detected-icon');
+  const label = document.getElementById('detected-label');
+  if (provider) {
+    const cfg = PROVIDER_CONFIG[provider];
+    row.style.display = 'flex';
+    icon.textContent = cfg.icon;
+    label.textContent = `Detected: ${cfg.name}`;
+    label.style.color = 'var(--success)';
+  } else if (value.length > 4) {
+    row.style.display = 'flex';
+    icon.textContent = '❓';
+    label.textContent = 'Provider not recognized — check your key format';
+    label.style.color = 'var(--warn)';
+  } else {
+    row.style.display = 'none';
+  }
+}
+
+function toggleApiPanel() {
+  const panel = document.getElementById('api-panel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  if (panel.style.display === 'block' && activeApiKey) {
+    document.getElementById('api-key-input').value = activeApiKey;
+    detectProvider(activeApiKey);
+  }
+}
+
+function toggleKeyVisibility() {
+  const input = document.getElementById('api-key-input');
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  const provider = detectProviderFromKey(key);
+  if (!key) { showNotif('Please paste an API key.', 'error'); return; }
+  if (!provider) { showNotif('Provider not recognized. Check key format.', 'error'); return; }
+  activeApiKey = key;
+  activeProvider = provider;
+  const cfg = PROVIDER_CONFIG[provider];
+  // Update badge
+  const badge = document.getElementById('api-provider-badge');
+  badge.textContent = `${cfg.icon} ${cfg.name}`;
+  badge.className = 'api-provider-badge ' + cfg.badgeClass;
+  document.getElementById('api-bar-hint').textContent = 'Ready to generate simulations';
+  document.getElementById('api-panel').style.display = 'none';
+  showNotif(`${cfg.name} connected successfully!`, 'success');
+}
+
+function clearApiKey() {
+  activeApiKey = null;
+  activeProvider = null;
+  document.getElementById('api-key-input').value = '';
+  document.getElementById('provider-detect-row').style.display = 'none';
+  const badge = document.getElementById('api-provider-badge');
+  badge.textContent = '🔑 No API Key';
+  badge.className = 'api-provider-badge';
+  document.getElementById('api-bar-hint').textContent = 'Enter an API key to begin';
+}
+
+// ═══════════════════ UNIFIED AI CALLER ═══════════════════
+async function callAI({ system, userMessages, maxTokens = 1000 }) {
+  if (!activeApiKey || !activeProvider) {
+    throw new Error('No API key configured. Please add one on the home screen.');
+  }
+  const cfg = PROVIDER_CONFIG[activeProvider];
+
+  if (activeProvider === 'claude') {
+    const body = { model: cfg.model, max_tokens: maxTokens, system, messages: userMessages };
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': activeApiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.content?.[0]?.text || '';
+  }
+
+  if (activeProvider === 'openai') {
+    // Convert anthropic-style messages to openai format
+    const messages = system ? [{ role: 'system', content: system }, ...userMessages] : userMessages;
+    // Convert image/doc content blocks if needed
+    const openaiMessages = messages.map(m => {
+      if (typeof m.content === 'string') return m;
+      // Handle array content (images, docs)
+      const parts = m.content.map(block => {
+        if (block.type === 'text') return { type: 'text', text: block.text };
+        if (block.type === 'image') return { type: 'image_url', image_url: { url: `data:${block.source.media_type};base64,${block.source.data}` } };
+        if (block.type === 'document') return { type: 'text', text: '[PDF document uploaded — analyze its contents]' };
+        return { type: 'text', text: block.text || '' };
+      });
+      return { role: m.role, content: parts };
+    });
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${activeApiKey}` },
+      body: JSON.stringify({ model: cfg.model, max_tokens: maxTokens, messages: openaiMessages })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.choices?.[0]?.message?.content || '';
+  }
+
+  if (activeProvider === 'gemini') {
+    // Build Gemini parts
+    const allMessages = userMessages.map(m => {
+      const parts = [];
+      if (typeof m.content === 'string') {
+        parts.push({ text: m.content });
+      } else {
+        m.content.forEach(block => {
+          if (block.type === 'text') parts.push({ text: block.text });
+          else if (block.type === 'image') parts.push({ inline_data: { mime_type: block.source.media_type, data: block.source.data } });
+          else if (block.type === 'document') parts.push({ text: '[PDF document uploaded — analyze its contents]' });
+        });
+      }
+      return { role: m.role === 'user' ? 'user' : 'model', parts };
+    });
+    const systemInstruction = system ? { parts: [{ text: system }] } : undefined;
+    const body = { contents: allMessages, ...(systemInstruction && { system_instruction: systemInstruction }) };
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${cfg.model}:generateContent?key=${activeApiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+}
+
+// ═══════════════════ STATE ═══════════════════
+let currentDiscipline = null;
+let currentScenario = null;
+let checkedErrors = new Set();
+let uploadedFile = null;
+let uploadedFileData = null; // base64 or text content
+let uploadedFileType = null; // 'image', 'pdf', 'text'
+
+// ═══════════════════ INTENT EXAMPLES PER DISCIPLINE ═══════════════════
+const INTENT_EXAMPLES = {
+  accounting: [
+    'Create a summary report for my supervisor',
+    'Analyze this for GAAP compliance issues',
+    'Generate a variance analysis memo',
+    'Prepare an executive financial summary'
+  ],
+  cybersecurity: [
+    'Write a threat intelligence briefing',
+    'Create an incident response summary',
+    'Generate a risk assessment report',
+    'Summarize this log for the security team'
+  ],
+  construction: [
+    'Generate a site safety inspection report',
+    'Create an OSHA compliance checklist',
+    'Write a project status update',
+    'Summarize this plan for the project owner'
+  ],
+  business: [
+    'Write an executive summary of this plan',
+    'Create a competitive analysis memo',
+    'Generate a market opportunity report',
+    'Summarize this for potential investors'
+  ]
+};
+
+// ═══════════════════ NAVIGATION ═══════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ═══════════════════ UPLOAD FLOW ═══════════════════
+function goToUpload(disc) {
+  currentDiscipline = disc;
+  const names = { accounting: 'Accounting', cybersecurity: 'Cybersecurity', construction: 'Construction Management', business: 'Business & Entrepreneurship' };
+  document.getElementById('upload-eyebrow').textContent = names[disc];
+
+  // Populate intent chips
+  const chips = document.getElementById('intent-examples');
+  chips.innerHTML = INTENT_EXAMPLES[disc].map(ex =>
+    `<span class="intent-chip" onclick="setIntent('${ex}')">${ex}</span>`
+  ).join('');
+
+  // Reset upload state
+  clearFile();
+  document.getElementById('intent-input').value = '';
+  document.getElementById('generate-btn').disabled = true;
+
+  showScreen('upload');
+}
+
+function setIntent(text) {
+  document.getElementById('intent-input').value = text;
+  checkGenerateReady();
+}
+
+function checkGenerateReady() {
+  const hasFile = uploadedFile !== null;
+  const hasIntent = document.getElementById('intent-input').value.trim().length > 10;
+  document.getElementById('generate-btn').disabled = !(hasFile && hasIntent);
+}
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  loadFile(file);
+}
+
+function loadFile(file) {
+  uploadedFile = file;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const icons = { pdf: '📑', txt: '📝', csv: '📊', png: '🖼️', jpg: '🖼️', jpeg: '🖼️' };
+
+  document.getElementById('file-icon').textContent = icons[ext] || '📄';
+  document.getElementById('file-name').textContent = file.name;
+  document.getElementById('file-size').textContent = formatBytes(file.size);
+  document.getElementById('file-preview').classList.add('visible');
+
+  // Read file content
+  const reader = new FileReader();
+  if (['png','jpg','jpeg'].includes(ext)) {
+    uploadedFileType = 'image';
+    reader.onload = e => { uploadedFileData = e.target.result.split(',')[1]; };
+    reader.readAsDataURL(file);
+  } else if (ext === 'pdf') {
+    uploadedFileType = 'pdf';
+    reader.onload = e => { uploadedFileData = e.target.result.split(',')[1]; };
+    reader.readAsDataURL(file);
+  } else {
+    uploadedFileType = 'text';
+    reader.onload = e => { uploadedFileData = e.target.result; };
+    reader.readAsText(file);
+  }
+
+  checkGenerateReady();
+}
+
+function clearFile() {
+  uploadedFile = null;
+  uploadedFileData = null;
+  uploadedFileType = null;
+  document.getElementById('file-preview').classList.remove('visible');
+  document.getElementById('file-input').value = '';
+  checkGenerateReady();
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+// Drag and drop
+document.addEventListener('DOMContentLoaded', () => {
+  const zone = document.getElementById('upload-zone');
+  if (!zone) return;
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) loadFile(file);
+  });
+});
+
+// ═══════════════════ GENERATE SCENARIO FROM UPLOAD ═══════════════════
+async function generateScenario() {
+  const intent = document.getElementById('intent-input').value.trim();
+  if (!intent || !uploadedFile) return;
+  if (!activeApiKey) {
+    showNotif('Please configure an API key on the home screen first.', 'error');
+    return;
+  }
+
+  const overlay = document.getElementById('generating-overlay');
+  const status = document.getElementById('gen-status');
+  overlay.classList.add('visible');
+
+  const disciplineNames = { accounting: 'Accounting', cybersecurity: 'Cybersecurity', construction: 'Construction Management', business: 'Business & Entrepreneurship' };
+  const discName = disciplineNames[currentDiscipline];
+
+  const statusMessages = [
+    'Reading your document...',
+    'Analyzing professional context...',
+    'Designing intentional errors...',
+    'Building your simulation...'
+  ];
+  let si = 0;
+  const statusInterval = setInterval(() => {
+    si = (si + 1) % statusMessages.length;
+    status.textContent = statusMessages[si];
+  }, 2000);
+
+  try {
+    // Build the message content based on file type
+    const userContent = [];
+
+    if (uploadedFileType === 'image') {
+      userContent.push({ type: 'image', source: { type: 'base64', media_type: uploadedFile.type, data: uploadedFileData } });
+    } else if (uploadedFileType === 'pdf') {
+      userContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: uploadedFileData } });
+    } else {
+      userContent.push({ type: 'text', text: `DOCUMENT CONTENT:\n\n${uploadedFileData}` });
+    }
+
+    userContent.push({
+      type: 'text',
+      text: `The student's task: "${intent}"\nDiscipline: ${discName}\n\nGenerate the simulation JSON now.`
+    });
+
+    const systemPrompt = `You are a professional simulation designer for "AI in My Field," an educational platform at Hillsborough Community College for the AI PREP4WORK initiative.
+
+A student has uploaded a real professional document and told you what task they'd like an AI to perform on it.
+
+Your job:
+1. Read and understand the uploaded document
+2. Generate a realistic AI output that performs the student's requested task — written as if an AI assistant produced it
+3. Deliberately embed 3–4 professional errors appropriate to the ${discName} discipline. Errors must be realistic mistakes an AI would plausibly make — wrong standards applied, missing compliance requirements, flawed reasoning, incorrect classifications, etc.
+4. The errors should NOT be obvious. They should require professional knowledge to catch.
+
+Respond ONLY with valid JSON in this exact format, no other text or markdown:
+{
+  "title": "<descriptive title for this simulation>",
+  "context": "<2-3 sentence description of the scenario for the student — who they are, what their role is, why they're reviewing this output>",
+  "aiOutput": "<the full AI-generated output text with errors embedded — use \\n for line breaks, formatted as a professional document>",
+  "errors": [
+    {
+      "id": "e1",
+      "label": "<short label naming the error>",
+      "hint": "<a guiding question that helps the student think — do NOT give away the answer>",
+      "detail": "<full explanation of what the error is, why it matters professionally, and what the correct approach would be>",
+      "severity": "high"
+    },
+    {
+      "id": "e2",
+      "label": "...",
+      "hint": "...",
+      "detail": "...",
+      "severity": "medium"
+    }
+  ]
+}`;
+
+    if (!activeApiKey) throw new Error('No API key configured. Please add one on the home screen.');
+
+    const raw_text = await callAI({
+      system: systemPrompt,
+      userMessages: [{ role: 'user', content: userContent }],
+      maxTokens: 1000
+    });
+
+    let raw = raw_text;
+    raw = raw.replace(/```json|```/g, '').trim();
+    const generated = JSON.parse(raw);
+
+    clearInterval(statusInterval);
+    overlay.classList.remove('visible');
+
+    // Launch the sim with the generated scenario
+    currentScenario = {
+      id: 'generated',
+      title: generated.title,
+      context: generated.context,
+      aiOutput: generated.aiOutput,
+      errors: generated.errors
+    };
+
+    launchSim();
+
+  } catch (err) {
+    clearInterval(statusInterval);
+    overlay.classList.remove('visible');
+    showNotif('Error generating simulation. Please try again.', 'error');
+    console.error(err);
+  }
+}
+
+function launchSim() {
+  checkedErrors = new Set();
+
+  document.getElementById('sim-eyebrow').textContent = `${currentDiscipline.toUpperCase()} · Custom Simulation`;
+  document.getElementById('sim-title').textContent = currentScenario.title;
+  document.getElementById('sim-context').textContent = currentScenario.context;
+
+  const output = document.getElementById('ai-output');
+  output.textContent = currentScenario.aiOutput;
+
+  const checklist = document.getElementById('error-checklist');
+  checklist.innerHTML = currentScenario.errors.map(e => `
+    <div class="error-item" id="check-${e.id}" onclick="toggleError('${e.id}')">
+      <div class="error-cb" id="cb-${e.id}"></div>
+      <div class="error-item-text">${e.label}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('chat-box').innerHTML = `<div class="chat-msg ai">👋 I generated this simulation from your document. Ask me anything about ${currentDiscipline} standards, regulations, or professional practices — I can help you reason through what you're seeing. I won't tell you where the errors are, but I can help you find them.</div>`;
+  document.getElementById('student-response').value = '';
+  document.getElementById('submit-btn').disabled = false;
+
+  updateProgress(1);
+  showScreen('sim');
+}
+
+function selectDiscipline(disc) {
+  currentDiscipline = disc;
+  const scenarios = SCENARIOS[disc];
+  const names = { accounting: 'Accounting', cybersecurity: 'Cybersecurity', construction: 'Construction Management', business: 'Business & Entrepreneurship' };
+  document.getElementById('scenarios-eyebrow').textContent = names[disc];
+  const list = document.getElementById('scenario-list');
+  list.innerHTML = scenarios.map((s, i) => `
+    <div class="scenario-item" onclick="startScenario('${disc}', ${i})">
+      <span class="scenario-num">0${i+1}</span>
+      <div class="scenario-info">
+        <h3>${s.title}</h3>
+        <p>${s.desc}</p>
+        <div class="scenario-meta">
+          <span class="meta-tag meta-difficulty">${s.difficulty}</span>
+          <span class="meta-tag meta-errors">${s.errors.length} embedded errors</span>
+        </div>
+      </div>
+      <span class="scenario-arrow">›</span>
+    </div>
+  `).join('');
+  showScreen('scenarios');
+}
+
+function startScenario(disc, idx) {
+  currentScenario = SCENARIOS[disc][idx];
+  checkedErrors = new Set();
+
+  // Headers
+  document.getElementById('sim-eyebrow').textContent = `${currentScenario.id.toUpperCase()} · ${SCENARIOS[disc].indexOf(currentScenario)+1} of ${SCENARIOS[disc].length}`;
+  document.getElementById('sim-title').textContent = currentScenario.title;
+  document.getElementById('sim-context').textContent = currentScenario.context;
+
+  // AI output with subtle highlights
+  const output = document.getElementById('ai-output');
+  output.innerHTML = currentScenario.aiOutput;
+
+  // Error checklist
+  const checklist = document.getElementById('error-checklist');
+  checklist.innerHTML = currentScenario.errors.map(e => `
+    <div class="error-item" id="check-${e.id}" onclick="toggleError('${e.id}')">
+      <div class="error-cb" id="cb-${e.id}"></div>
+      <div class="error-item-text">${e.label}</div>
+    </div>
+  `).join('');
+
+  // Reset chat
+  document.getElementById('chat-box').innerHTML = `<div class="chat-msg ai">👋 I'm your AI field guide for this scenario. Ask me about regulations, standards, or professional practices. I won't tell you where the errors are — but I can help you reason through them.</div>`;
+  document.getElementById('student-response').value = '';
+  document.getElementById('submit-btn').disabled = false;
+
+  // Progress
+  updateProgress(1);
+  showScreen('sim');
+}
+
+function toggleError(id) {
+  const item = document.getElementById('check-' + id);
+  const cb = document.getElementById('cb-' + id);
+  if (checkedErrors.has(id)) {
+    checkedErrors.delete(id);
+    item.classList.remove('checked');
+    cb.innerHTML = '';
+  } else {
+    checkedErrors.add(id);
+    item.classList.add('checked');
+    cb.innerHTML = '✓';
+  }
+}
+
+function updateProgress(step) {
+  const labels = ['Review', 'Investigate', 'Analyze', 'Submit'];
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('step' + i);
+    el.className = 'progress-step';
+    if (i < step) el.classList.add('done');
+    else if (i === step) el.classList.add('active');
+  }
+  document.getElementById('step-label').textContent = labels[step - 1];
+}
+
+// ═══════════════════ CHAT ═══════════════════
+function handleChatKey(e) {
+  if (e.key === 'Enter') sendChat();
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+
+  const box = document.getElementById('chat-box');
+  box.innerHTML += `<div class="chat-msg user">${escapeHtml(msg)}</div>`;
+  box.innerHTML += `<div class="chat-msg ai thinking" id="chat-thinking"><span class="loader"><span></span><span></span><span></span></span></div>`;
+  box.scrollTop = box.scrollHeight;
+
+  updateProgress(2);
+
+  try {
+    const systemPrompt = `You are an AI field guide assistant for a professional simulation platform called "AI in My Field" at Hillsborough Community College.
+
+The student is working on this scenario: "${currentScenario.title}"
+Context: ${currentScenario.context}
+Discipline: ${currentDiscipline}
+
+The AI output they are reviewing contains these embedded errors (DO NOT reveal these directly):
+${currentScenario.errors.map(e => `- ${e.label}: ${e.detail}`).join('\n')}
+
+Your role:
+- Help the student think through professional standards, regulations, and best practices
+- Answer questions about the discipline (GAAP, OSHA, HIPAA, ASC 606, etc.)
+- Guide reasoning WITHOUT directly revealing which errors are in the document
+- If asked directly "where are the errors" — say you can't tell them, but ask a guiding question instead
+- Be concise, practical, and educational
+- Keep responses to 3-4 sentences max`;
+
+    if (!activeApiKey) throw new Error('No API key. Please configure one on the home screen.');
+
+    const reply = await callAI({
+      system: systemPrompt,
+      userMessages: [{ role: 'user', content: msg }],
+      maxTokens: 1000
+    }) || 'I had trouble responding. Please try again.';
+
+    document.getElementById('chat-thinking').remove();
+    box.innerHTML += `<div class="chat-msg ai">${escapeHtml(reply)}</div>`;
+    box.scrollTop = box.scrollHeight;
+  } catch (err) {
+    document.getElementById('chat-thinking').remove();
+    box.innerHTML += `<div class="chat-msg ai">Connection error. Please try again.</div>`;
+    box.scrollTop = box.scrollHeight;
+  }
+}
+
+// ═══════════════════ SUBMIT & EVALUATE ═══════════════════
+async function submitAnalysis() {
+  const response = document.getElementById('student-response').value.trim();
+  if (!response || response.length < 50) {
+    showNotif('Please write a more detailed analysis before submitting.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Evaluating...';
+  updateProgress(4);
+
+  const errorsChecked = currentScenario.errors.filter(e => checkedErrors.has(e.id));
+  const errorsMissed = currentScenario.errors.filter(e => !checkedErrors.has(e.id));
+
+  try {
+    const systemPrompt = `You are an expert evaluator for a professional simulation platform. Evaluate a student's analysis of AI-generated professional output.
+
+Scenario: ${currentScenario.title}
+Discipline: ${currentDiscipline}
+Context: ${currentScenario.context}
+
+The embedded errors in the AI output were:
+${currentScenario.errors.map((e,i) => `${i+1}. [${e.severity.toUpperCase()}] ${e.label}: ${e.detail}`).join('\n')}
+
+The student checked these errors as identified:
+${errorsChecked.length > 0 ? errorsChecked.map(e => `- ${e.label}`).join('\n') : 'None checked'}
+
+The student's written analysis:
+"${response}"
+
+Evaluate on four dimensions (0-25 each, total 100):
+1. Error Detection: Did they identify the right errors? (based on checklist AND their written analysis)
+2. Conceptual Understanding: Do they show understanding of WHY each issue matters?
+3. Professional Reasoning: Do they apply professional standards correctly (GAAP, OSHA, etc.)?
+4. Communication Clarity: Is the analysis clear, organized, and professional?
+
+Respond in this exact JSON format only, no other text:
+{
+  "scores": {
+    "errorDetection": <0-25>,
+    "conceptualUnderstanding": <0-25>,
+    "professionalReasoning": <0-25>,
+    "communicationClarity": <0-25>
+  },
+  "total": <0-100>,
+  "headline": "<6-word summary of performance>",
+  "feedback": "<3-4 sentence overall feedback paragraph, specific to what they did well and where they need improvement>",
+  "errorResults": [
+    ${currentScenario.errors.map(e => `{"id": "${e.id}", "found": <true/false>, "note": "<one sentence about student's handling of this error>"}`).join(',\n    ')}
+  ]
+}`;
+
+    if (!activeApiKey) throw new Error('No API key. Please configure one on the home screen.');
+
+    let evalText = await callAI({
+      system: 'You are an expert evaluator. Respond only in valid JSON.',
+      userMessages: [{ role: 'user', content: systemPrompt }],
+      maxTokens: 1000
+    }) || '';
+    evalText = evalText.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(evalText);
+
+    displayResults(result);
+
+  } catch (err) {
+    // Fallback scoring if API fails
+    const detected = errorsChecked.length;
+    const total = currentScenario.errors.length;
+    const ratio = detected / total;
+    const score = Math.round(ratio * 70 + 15);
+
+    displayResults({
+      scores: {
+        errorDetection: Math.round(ratio * 25),
+        conceptualUnderstanding: Math.round(ratio * 20 + 5),
+        professionalReasoning: Math.round(ratio * 20 + 5),
+        communicationClarity: Math.round(response.length > 200 ? 18 : 12)
+      },
+      total: score,
+      headline: detected === total ? 'All errors identified!' : `${detected} of ${total} errors found`,
+      feedback: `You identified ${detected} out of ${total} embedded errors. Review the professional standards associated with this scenario to strengthen your analysis.`,
+      errorResults: currentScenario.errors.map(e => ({
+        id: e.id,
+        found: checkedErrors.has(e.id),
+        note: checkedErrors.has(e.id) ? 'Correctly identified.' : 'This error was not identified in your analysis.'
+      }))
+    });
+  }
+}
+
+function displayResults(result) {
+  const total = result.total;
+  const colors = total >= 80 ? '#00e5a0' : total >= 60 ? '#ffd166' : '#ff4c6b';
+
+  // Score ring
+  const circumference = 326.7;
+  const offset = circumference - (total / 100) * circumference;
+  const circle = document.getElementById('score-circle');
+  circle.style.stroke = colors;
+  circle.style.strokeDashoffset = circumference;
+
+  document.getElementById('result-score').textContent = total;
+  document.getElementById('result-score').style.color = colors;
+  document.getElementById('result-headline').textContent = result.headline;
+  document.getElementById('result-sub').textContent = total >= 80 ? 'Excellent professional oversight skills!' :
+    total >= 60 ? 'Good analysis with room to grow.' : 'Keep practicing — review the feedback carefully.';
+
+  showScreen('results');
+
+  setTimeout(() => { circle.style.strokeDashoffset = offset; }, 100);
+
+  // Rubric
+  const rubricGrid = document.getElementById('rubric-grid');
+  const rubrics = [
+    { key: 'errorDetection', label: 'Error Detection', color: '#ff4c6b' },
+    { key: 'conceptualUnderstanding', label: 'Conceptual Understanding', color: '#7b6fff' },
+    { key: 'professionalReasoning', label: 'Professional Reasoning', color: '#00c8ff' },
+    { key: 'communicationClarity', label: 'Communication Clarity', color: '#00e5a0' }
+  ];
+  rubricGrid.innerHTML = rubrics.map(r => {
+    const score = result.scores[r.key] || 0;
+    const pct = (score / 25) * 100;
+    return `<div class="rubric-card">
+      <div class="rubric-label">${r.label}</div>
+      <div class="rubric-score" style="color:${r.color}">${score}<span style="font-size:14px;color:var(--text3)"> /25</span></div>
+      <div class="rubric-bar"><div class="rubric-bar-fill" id="bar-${r.key}" style="background:${r.color};width:0%"></div></div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('feedback-text').textContent = result.feedback;
+
+  // Error results
+  const errorsFound = document.getElementById('errors-found');
+  errorsFound.innerHTML = (result.errorResults || []).map(er => {
+    const errDef = currentScenario.errors.find(e => e.id === er.id);
+    return `<div class="error-result ${er.found ? 'correct' : 'missed'}">
+      <span class="er-icon">${er.found ? '✅' : '❌'}</span>
+      <div class="er-text">
+        <strong>${errDef?.label || er.id}</strong>
+        ${er.note}
+        ${!er.found && errDef ? `<div style="margin-top:6px;padding:8px;background:rgba(255,255,255,0.04);border-radius:6px;font-size:12px;color:var(--text3)">${errDef.detail}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  setTimeout(() => {
+    rubrics.forEach(r => {
+      const pct = ((result.scores[r.key] || 0) / 25) * 100;
+      const bar = document.getElementById('bar-' + r.key);
+      if (bar) bar.style.width = pct + '%';
+    });
+  }, 200);
+}
+
+// ═══════════════════ UTILS ═══════════════════
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showNotif(msg, type='success') {
+  const icons = { success: '✓', error: '⚠' };
+  const notif = document.createElement('div');
+  notif.className = `notif ${type}`;
+  notif.innerHTML = `<span>${icons[type]}</span> ${msg}`;
+  document.body.appendChild(notif);
+  setTimeout(() => notif.remove(), 3500);
+}
+</script>
+</body>
+</html>
