@@ -102,7 +102,7 @@
       <option value="cybersecurity">Cybersecurity</option>
     </select>
   </div>
-  <p id="status">Select your major, then click Start Session.</p>
+  <p id="status">You will use the laptop's microphone to give prompts to the AI Field Guide. First, select your major, then click Start Session.</p>
   <div class="controls">
     <button id="startBtn">Start Session</button>
     <button id="stopBtn">End Session</button>
@@ -116,7 +116,7 @@
   </div>
 
   <div id="transcript"></div>
-  <p style="color:#222e3a; font-size:11px; margin-top:18px; letter-spacing:1px;"> AI Agent &bull; v2.1 &bull; March 2026</p>
+  <p style="color:#222e3a; font-size:11px; margin-top:18px; letter-spacing:1px;"> AI in My Field Assistant &bull; v2.1 &bull; March 2026</p>
 
 <script type="module">
 
@@ -130,8 +130,8 @@ import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavat
   const MAJORS = {
     general: {
       label: "General / Exploring",
-      prompt: "The student is exploring AI generally across different fields. Help them discover how AI applies to various industries and careers.",
-      firstMessage: "Hi! I'm Wayne, your AI Field Guide at Hillsborough College. I'm here to help you explore how AI can impact your future career. What field are you most curious about?"
+      prompt: "The student is exploring AI generally across different majors and career fields. Help them discover how AI applies to various industries and careers.",
+      firstMessage: "Hi! I'm Wayne, your AI Field Guide at Hillsborough College. I'm here to help you explore how AI tools are used in your future career. What field are you most curious about?"
     },
     construction: {
       label: "Construction Management",
@@ -357,7 +357,7 @@ import { LiveAvatarSession } from "https://cdn.jsdelivr.net/npm/@heygen/liveavat
             conversation_config_override: {
               agent: {
                 prompt: {
-                  prompt: `You are Wayne, an AI Field Guide for Hillsborough Community College students. ${major.prompt} Keep all responses concise — 2 to 3 sentences maximum. Be concise and practical. Ask one question at a time.`
+                  prompt: `You are Wayne, an AI Field Guide for Hillsborough College students. ${major.prompt} Keep all responses concise — 2 to 3 sentences maximum. Be concise and practical. Ask one question at a time.`
                 },
                 first_message: major.firstMessage
               }
